@@ -1,4 +1,4 @@
-const StateMachine = require("./AdvStateMachine")
+const { StateMachine } = require("./AdvStateMachine")
 
 function prepareStateMachine() {
     return new StateMachine(null, {
@@ -31,7 +31,7 @@ function prepareStateMachine() {
             },
 
             musicRotation: {
-                region: true,
+                concurrent: true,
                 parent: "powerOn",
                 initial: true,
                 transitions: {
@@ -117,3 +117,5 @@ function main(){
     let sm = prepareStateMachine();
 
 }
+
+main()

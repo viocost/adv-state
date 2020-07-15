@@ -207,7 +207,7 @@ class StateMachine {
     constructor(obj, { stateMap, name = "State Machine" },
         { msgNotExistMode = StateMachine.Discard, traceLevel = StateMachine.TraceLevel.INFO} = {}){
 
-        this.validateStateMap(stateMap)
+       // this.validateStateMap(stateMap)
 
         this.obj = obj;
 
@@ -225,9 +225,12 @@ class StateMachine {
 
         this.legalEvents = this._generateEventNames();
 
-        this.state = this._getInitialState();
 
         this.rootState = this._verifyBuildStateTree()
+        this.state = this.rootState;
+
+        console.log(this.state.name)
+        return
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         // let entryNewState = this.stateMap[initialState].entry;                                                                                 //
         // if (typeof entryNewState === "function") {                                                                                             //
@@ -471,14 +474,19 @@ class StateMachine {
 
         //verifying there is only a single root
         for(let stateName in this.stateMap){
-            let state = this.stateTreeNodes[stateName];
-            if(state.isInfo() && !state.parent){
+            let state = stateTreeNodes[stateName];
+            if(state.isInitial() && !state.parent){
                 initialState.push(state);
             }
 
-            //verifying that same condition holds for child states
+            // If no child states or is a concurrent region - continue
+            if (!state.hasChildren() || state.isConcurrent()){
+                continue
+            }
 
+            //verifying that same condition holds for child states
             let localInitial = [];
+
 
             for (let child of stateTreeNodes[stateName].children){
                 if (child.isInitial()){
@@ -487,12 +495,12 @@ class StateMachine {
             }
 
             if(localInitial.length !== 1){
-                throw new err.noneMultipleInitial(localInitial.join())
+                throw new err.noneMultipleInitial(`parent: ${state.name}, initial: ${localInitial.join()}`)
             }
         }
 
         if (initialState.length !== 1){
-            throw new err.noneMultipleInitial(initialState.map((el)=> el.name).join())
+            throw new err.noneMultipleInitial(`Root level. initial: ${initialState.map((el)=> el.name).join()}`)
         }
 
         return initialState[0];
@@ -534,8 +542,16 @@ class StateTreeNode{
         this.parent = parent
     }
 
+    isConcurrent(){
+        return this.concurrent;
+    }
+
     isInitial(){
         return this.initial;
+    }
+
+    hasChildren(){
+        return this.children.length > 0;
     }
 
     _checkNodeType(state){

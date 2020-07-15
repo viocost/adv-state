@@ -443,7 +443,7 @@ class StateMachine {
 
     _verifyBuildStateTree(){
         let stateTreeNodes = {}
-        let root = null;
+        let initialState = [];
 
         //creating nodes
         for (let stateName in this.stateMap){
@@ -471,14 +471,9 @@ class StateMachine {
 
         //verifying there is only a single root
         for(let stateName in this.stateMap){
-            let state = this.stateMap[stateName];
-            if(state.initial && state.parent === undefined){
-
-                if (root){
-                    throw new err.noneMultipleInitial(`${root}, ${stateName}`)
-                }
-
-                root = stateName;
+            let state = this.stateTreeNodes[stateName];
+            if(state.isInfo() && !state.parent){
+                initialState.push(state);
             }
 
             //verifying that same condition holds for child states
@@ -496,8 +491,13 @@ class StateMachine {
             }
         }
 
+        if (initialState.length !== 1){
+            throw new err.noneMultipleInitial(initialState.map((el)=> el.name).join())
+        }
 
+        return initialState[0];
     }
+
 
     _getInitialState(){
         for (let state in this.stateMap){

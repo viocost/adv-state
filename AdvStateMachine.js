@@ -31,9 +31,11 @@
  *
  * Music substates are:
  *   - Playing
- *   - Off
- *
- * Rotation substates are
+ *   - Off,
+ * multipleInitialNodes: "MultipleInitialNodesFound",
+ *,throw new err.
+ * multipleInitialNodes: "MultipleInitialNodesFound",
+ * Rotation substates arethrow new err.
  *  - Off
  *  - Rotating left
  *  - Rotating right
@@ -140,7 +142,7 @@
                  state: "rotationRight"
              }
          }
-     }
+     },
 
      rotationRight: {
          parent: "rotation",
@@ -162,7 +164,17 @@
 
 
 
-const { createDerivedErrorClasses } = require("../../../../common/DynamicError");
+/**
+ *
+ * Actions
+ *   array of lambdas passed to the transitions
+ *   Each will be called with
+ *     StateMachine, EventName, EventArgs
+ */
+
+
+
+const { createDerivedErrorClasses } = require("./DynamicError");
 
 
 class StateMachineError extends Error{ constructor(details) { super(details); this.name = "StateMachineError" } }
@@ -171,23 +183,14 @@ const err = createDerivedErrorClasses(StateMachineError, {
     msgNotExist: "MessageNotExist",
     noStateMap: "MissingStateMap",
     initStateNotInMap: "InitialStateNotFoundInMap",
-    multipleInitialStates: "MultipleInitialStates",
+    noneMultipleInitial: "NoneOrMultipleInitialStates",
     stateNotExist: "StateNotExist",
     blown: "StateMachineIsBlown",
     illegalEventName: "IllegalEventName",
     actionTypeInvalid: "ActionTypeInvalid",
     cannotDetermineAction: "CannotDetermineValidAction",
+    invalidStateNodeType: "InvalidStateTreeNodeType",
 })
-
-
-
-/**
- *
- * Actions
- *   array of lambdas passed to the transitions
- *   Each will be called with
- *     StateMachine, EventName, EventArgs
- */
 
 
 class StateMachine {
@@ -220,11 +223,11 @@ class StateMachine {
 
         });
 
-        this.legalEvents = this.generateEventNames();
+        this.legalEvents = this._generateEventNames();
 
-        this.state = this.getInitialState();
+        this.state = this._getInitialState();
 
-
+        this.rootState = this._verifyBuildStateTree()
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         // let entryNewState = this.stateMap[initialState].entry;                                                                                 //
         // if (typeof entryNewState === "function") {                                                                                             //
@@ -233,9 +236,9 @@ class StateMachine {
         // }                                                                                                                                      //
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-        let initialEntryActions =  this.stateMap[this.getInitialState()].entry;
+        let initialEntryActions =  this.stateMap[this._getInitialState()].entry;
         if(initialEntryActions) {
-            this.performActions(initialEntryActions, "Initial entry", undefined, undefined);
+            this._performActions(initialEntryActions, "Initial entry", undefined, undefined);
 
         } 
 
@@ -345,12 +348,12 @@ class StateMachine {
 
             let exitActions = this.stateMap[this.state].exit;
 
-            if(exitActions) this.performActions(exitActions, "exit", eventName, eventArgs);
+            if(exitActions) this._performActions(exitActions, "exit", eventName, eventArgs);
 
 
         }
 
-        if (actions) this.performActions(actions, "transition", eventName, eventArgs);
+        if (actions) this._performActions(actions, "transition", eventName, eventArgs);
 
         //Setting new state
         if (newState) {
@@ -358,12 +361,12 @@ class StateMachine {
             let entryActions = this.stateMap[newState].entry;
             this.state = newState;
             if(this.isInfo()) console.log(`%c ${this.name}: State is now set to ${this.state}`, 'color: #3502ff; font-size: 10px; font-weight: 600; ');
-            if (entryActions) this.performActions(entryActions, "entry", eventName, eventArgs);
+            if (entryActions) this._performActions(entryActions, "entry", eventName, eventArgs);
 
         }
     }
 
-    performActions(actions, context, eventName, eventArgs){
+    _performActions(actions, context, eventName, eventArgs){
 
         if (this.isDebug()) {
             console.log(`%c ${this.name}: Calling actions for ${context} || Event name: ${eventName} `, 'color: #c45f01; font-size: 13px; font-weight: 600; ');
@@ -383,7 +386,7 @@ class StateMachine {
 
     }
 
-    generateEventNames(){
+    _generateEventNames(){
         let res = new Set();
 
         for( let state in this.stateMap){
@@ -434,10 +437,69 @@ class StateMachine {
 
         //Verify state map
         if(initialState.length === 0) throw new err.initStateNotInMap(`Initial state provided: ${initialState} || States: ${JSON.stringify(Object.keys(stateMap))}`);
-        if(initialState.length > 1) throw new err.multipleInitialStates(JSON.stringify(initialState));
+        if(initialState.length > 1) throw new err.noneMultipleInitial(JSON.stringify(initialState));
     }
 
-    getInitialState(){
+
+    _verifyBuildStateTree(){
+        let stateTreeNodes = {}
+        let root = null;
+
+        //creating nodes
+        for (let stateName in this.stateMap){
+            let state = this.stateMap[stateName];
+            stateTreeNodes[stateName] = new StateTreeNode({
+                name: stateName,
+                concurrent: state.concurrent,
+                initial: state.initial,
+                transitions: state.transitions,
+                entryActions: state.entry,
+                exitActions: state.exit
+            });
+        }
+
+
+        //setting parents, adding children
+        for (let stateName in stateTreeNodes){
+            let parent = this.stateMap[stateName].parent
+
+            if(parent){
+                stateTreeNodes[parent].addChild(stateTreeNodes[stateName])
+                stateTreeNodes[stateName].setParent(stateTreeNodes[parent])
+            }
+        }
+
+        //verifying there is only a single root
+        for(let stateName in this.stateMap){
+            let state = this.stateMap[stateName];
+            if(state.initial && state.parent === undefined){
+
+                if (root){
+                    throw new err.noneMultipleInitial(`${root}, ${stateName}`)
+                }
+
+                root = stateName;
+            }
+
+            //verifying that same condition holds for child states
+
+            let localInitial = [];
+
+            for (let child of stateTreeNodes[stateName].children){
+                if (child.isInitial()){
+                    localInitial.push(child.name);
+                }
+            }
+
+            if(localInitial.length !== 1){
+                throw new err.noneMultipleInitial(localInitial.join())
+            }
+        }
+
+
+    }
+
+    _getInitialState(){
         for (let state in this.stateMap){
             if(this.stateMap[state].initial) return state;
         }
@@ -445,7 +507,43 @@ class StateMachine {
 }
 
 
+class StateTreeNode{
+    constructor({ name,
+                  concurrent = false,
+                  initial = false,
+                  transitions = {},
+                  entryActions = [],
+                  exitActions = [] }){
+        this.concurrent = concurrent;
+        this.name = name;
+        this.parent = null;
+        this.children = [];
+        this.initial = initial;
+        this.entryActions = entryActions;
+        this.exitActions = exitActions;
+        this.transitions = transitions;
+    }
 
+    addChild(childState){
+        this._checkNodeType(childState)
+        this.children.push(childState)
+    }
+
+    setParent(parent){
+        this._checkNodeType(parent)
+        this.parent = parent
+    }
+
+    isInitial(){
+        return this.initial;
+    }
+
+    _checkNodeType(state){
+        if(!(state instanceof StateTreeNode)){
+            throw new err.invalidStateNodeType();
+        }
+    }
+}
 
 
 

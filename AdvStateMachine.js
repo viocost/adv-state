@@ -177,7 +177,7 @@
 const { createDerivedErrorClasses } = require("./DynamicError");
 
 
-class StateMachineError extends Error{ constructor(details) { super(details); this.name = "StateMachineError" } }
+class StateMachineError extends Error { constructor(details) { super(details); this.name = "StateMachineError" } }
 
 const err = createDerivedErrorClasses(StateMachineError, {
     msgNotExist: "MessageNotExist",
@@ -194,9 +194,9 @@ const err = createDerivedErrorClasses(StateMachineError, {
 
 
 class StateMachine {
-    static Discard () {}  ;
-    static Warn  (smName, prop) { console.warn(`${smName}: property ${prop} does not exist in current state`) };
-    static Die   (prop, smName) { throw new err.msgNotExist(`${smName}, ${prop}`)   };
+    static Discard() { };
+    static Warn(smName, prop) { console.warn(`${smName}: property ${prop} does not exist in current state`) };
+    static Die(prop, smName) { throw new err.msgNotExist(`${smName}, ${prop}`) };
     static TraceLevel = {
         NONE: Symbol("none"),
         INFO: Symbol("info"),
@@ -205,9 +205,9 @@ class StateMachine {
 
 
     constructor(obj, { stateMap, name = "State Machine" },
-        { msgNotExistMode = StateMachine.Discard, traceLevel = StateMachine.TraceLevel.INFO} = {}){
+        { msgNotExistMode = StateMachine.Discard, traceLevel = StateMachine.TraceLevel.INFO } = {}) {
 
-       // this.validateStateMap(stateMap)
+        // this.validateStateMap(stateMap)
 
         this.obj = obj;
 
@@ -216,8 +216,8 @@ class StateMachine {
         this.name = name;
         this.msgNotExistMode = msgNotExistMode;
         this.stateMap = new Proxy(stateMap, {
-            get(target, prop){
-                if(!(prop in target)) throw new err.stateNotExist(prop)
+            get(target, prop) {
+                if (!(prop in target)) throw new err.stateNotExist(prop)
                 return target[prop];
             }
 
@@ -225,42 +225,33 @@ class StateMachine {
 
         this.legalEvents = this._generateEventNames();
 
+        //root state
+        this._rootState = this._verifyBuildStateTree();
 
-        this.rootState = this._verifyBuildStateTree()
-        this.state = this.rootState;
-
-        console.log(this.state.name)
         return
-        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        // let entryNewState = this.stateMap[initialState].entry;                                                                                 //
-        // if (typeof entryNewState === "function") {                                                                                             //
-        //     if(this.trace) console.log(`%c ${this.name}: Calling entry action for "${initialState}"`,  'color: #009933;  font-weight: 600; '); //
-        //     entryNewState();                                                                                                                   //
-        // }                                                                                                                                      //
-        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-        let initialEntryActions =  this.stateMap[this._getInitialState()].entry;
-        if(initialEntryActions) {
+        let initialEntryActions = this.state.entryActions
+        if (initialEntryActions) {
             this._performActions(initialEntryActions, "Initial entry", undefined, undefined);
 
-        } 
+        }
 
 
         this.handle = new Proxy(this, {
             get(target, prop) {
 
-                if(target.error) throw new err.blown(target.error);
+                if (target.error) throw new err.blown(target.error);
 
-                if( target.legalEvents.has(prop))
+                if (target.legalEvents.has(prop))
                     return (...args) => {
-                        setImmediate(()=>{
-                            if(target.error) return;
-                            try{
+                        setImmediate(() => {
+                            if (target.error) return;
+                            try {
                                 target.processEvent(prop, args);
-                            }catch(err){
+                            } catch (err) {
                                 target.error = err;
                                 console.warn(`${target.name}: Event handler "${prop}" thrown an exception: ${err}`)
-                                if(target.isDebug()) throw err
+                                if (target.isDebug()) throw err
                             }
                         })
                     };
@@ -271,20 +262,34 @@ class StateMachine {
     }
 
 
-    getEventDescription(eventName, eventArgs){
+    printStateTree(){
+        console.log(`\n${this.name} STATE TREE`);
+        StateMachine._performPrintStateTree(this._rootState)
+    }
+
+    static _performPrintStateTree(root, level=0){
+        console.log(`${Array(level).fill(' ').join('')}${root.name}; ${root.active ? "active" : "inactive"}; childrenCount: ${Object.keys(root.children).length}`);
+        for(let substate in root.children){
+            StateMachine._performPrintStateTree(root.children[substate], level+4)
+        }
+    }
+
+    // Determins which of transitions are to be executed
+    // depending on guards passed
+    getEventDescription(eventName, eventArgs) {
         let descriptions = this.stateMap[this.state].transitions[eventName];
 
-        if(!Array.isArray(descriptions)){
-            descriptions = [ descriptions ]
+        if (!Array.isArray(descriptions)) {
+            descriptions = [descriptions]
         }
 
         let res = []
 
-        for (let desc of descriptions){
-            if(this.areGuardsPassed(desc, eventName, eventArgs)) res.push(desc)
+        for (let desc of descriptions) {
+            if (this.areGuardsPassed(desc, eventName, eventArgs)) res.push(desc)
         }
 
-        if(res.length > 1 ){
+        if (res.length > 1) {
             this.error = true;
             throw new err.cannotDetermineAction(`For ${eventName}. Multiple actions' guards passed`)
         }
@@ -293,21 +298,27 @@ class StateMachine {
 
     }
 
-    areGuardsPassed(evDescription, eventName, eventArgs){
+    areGuardsPassed(evDescription, eventName, eventArgs) {
         let res = true;
-        if( undefined === evDescription.guards) return res;
+        if (undefined === evDescription.guards) return res;
 
-        let guards = Array.isArray(evDescription.guards) ? evDescription.guards : [ evDescription.guards ];
+        let guards = Array.isArray(evDescription.guards) ? evDescription.guards : [evDescription.guards];
 
-        for(let guard of guards){
-            if(!guard.call(this.obj, this, eventName, eventArgs)) {
+        for (let guard of guards) {
+            if (!guard.call(this.obj, this, eventName, eventArgs)) {
                 res = false;
                 break;
             }
         }
 
-        if(this.isDebug()) console.log(`   Guards evaluated to ${res} `);
+        if (this.isDebug()) console.log(`   Guards evaluated to ${res} `);
         return res;
+    }
+
+
+    _isEventLegal(eventName){
+
+
     }
 
     processEvent(eventName, eventArgs) {
@@ -321,29 +332,45 @@ class StateMachine {
         //   call entry actions on new state //
         ///////////////////////////////////////
 
-        if (this.isInfo()){
+        /**
+         *
+         * from root
+         *    activeState := sm.getActiveState(root)
+         *
+         *
+         *
+         */
+
+        if (this.isInfo()) {
             console.log(`${this.name}: Current state: ${this.state}. `)
-            if(this.isDebug())
+            if (this.isDebug())
                 console.log(`   Processing event ${eventName}(${JSON.stringify(eventArgs)})`);
         }
 
-        if (!(eventName in this.stateMap[this.state].transitions)){
-            this.msgNotExistMode(eventName, this.name);
-            return;
+
+        //////////////////////////////////////////////////////////////////
+        // if (!(eventName in this.stateMap[this.state].transitions)) { //
+        //     this.msgNotExistMode(eventName, this.name);              //
+        //     return;                                                  //
+        // }                                                            //
+        //////////////////////////////////////////////////////////////////
+        if(!this._isEventLegal(eventName)){
+             this.msgNotExistMode(eventName, this.name);
+             return;
         }
 
         let eventDescription = this.getEventDescription(eventName, eventArgs);
 
-        if(undefined === eventDescription){
-            if(this.isInfo()) console.log(`  NO VALID ACTION FOUND for ${eventName}`);
+        if (undefined === eventDescription) {
+            if (this.isInfo()) console.log(`  NO VALID ACTION FOUND for ${eventName}`);
             return
         }
 
-        let actions =  eventDescription["actions"];
+        let actions = eventDescription["actions"];
         let newState = eventDescription["state"]
 
         if (newState) {
-            if (!(newState in this.stateMap)){
+            if (!(newState in this.stateMap)) {
 
                 this.error = true;
                 throw new err.stateNotExist(newState);
@@ -351,7 +378,7 @@ class StateMachine {
 
             let exitActions = this.stateMap[this.state].exit;
 
-            if(exitActions) this._performActions(exitActions, "exit", eventName, eventArgs);
+            if (exitActions) this._performActions(exitActions, "exit", eventName, eventArgs);
 
 
         }
@@ -363,24 +390,24 @@ class StateMachine {
 
             let entryActions = this.stateMap[newState].entry;
             this.state = newState;
-            if(this.isInfo()) console.log(`%c ${this.name}: State is now set to ${this.state}`, 'color: #3502ff; font-size: 10px; font-weight: 600; ');
+            if (this.isInfo()) console.log(`%c ${this.name}: State is now set to ${this.state}`, 'color: #3502ff; font-size: 10px; font-weight: 600; ');
             if (entryActions) this._performActions(entryActions, "entry", eventName, eventArgs);
 
         }
     }
 
-    _performActions(actions, context, eventName, eventArgs){
+    _performActions(actions, context, eventName, eventArgs) {
 
         if (this.isDebug()) {
             console.log(`%c ${this.name}: Calling actions for ${context} || Event name: ${eventName} `, 'color: #c45f01; font-size: 13px; font-weight: 600; ');
         }
 
-        if (!Array.isArray(actions)){
+        if (!Array.isArray(actions)) {
             actions = [actions]
         }
 
-        for( let action of actions ){
-            if(typeof action !== "function") {
+        for (let action of actions) {
+            if (typeof action !== "function") {
                 this.error = true;
                 throw new err.actionTypeInvalid(typeof action);
             }
@@ -389,27 +416,27 @@ class StateMachine {
 
     }
 
-    _generateEventNames(){
+    _generateEventNames() {
         let res = new Set();
 
-        for( let state in this.stateMap){
-            for(let event in this.stateMap[state].transitions){
+        for (let state in this.stateMap) {
+            for (let event in this.stateMap[state].transitions) {
                 res.add(event)
             }
         }
-        if(this.isInfo()) console.log(`${this.name} recognizes events ${JSON.stringify(Array.from(res))}`)
+        if (this.isInfo()) console.log(`${this.name} recognizes events ${JSON.stringify(Array.from(res))}`)
         return res;
     }
 
-    isDebug(){
+    isDebug() {
         return this.traceLevel === StateMachine.TraceLevel.DEBUG;
     }
 
-    isInfo(){
+    isInfo() {
         return this.traceLevel === StateMachine.TraceLevel.DEBUG || this.traceLevel === StateMachine.TraceLevel.INFO;
     }
 
-    validateStateMap(stateMap){
+    validateStateMap(stateMap) {
         /*
         * State map constraints
         *
@@ -425,31 +452,37 @@ class StateMachine {
         * 10. By default a region considered to be non-concurrent. To make region concurrent need to set concurrent: true in state map.
                 //Verify there is state map
         */
-        if( stateMap === undefined) throw new err.noStateMap();
+        if (stateMap === undefined) throw new err.noStateMap();
 
         //Verify there is initial state
         let initialState = [];
-        for (let state in stateMap){
+        for (let state in stateMap) {
             if (stateMap[state].initial) initialState.push(state)
 
             //transitions must be at least an empty object
-            if (!stateMap[state].hasOwnProperty("transitions")){
+            if (!stateMap[state].hasOwnProperty("transitions")) {
                 stateMap[state].transitions = {}
             }
         }
 
         //Verify state map
-        if(initialState.length === 0) throw new err.initStateNotInMap(`Initial state provided: ${initialState} || States: ${JSON.stringify(Object.keys(stateMap))}`);
-        if(initialState.length > 1) throw new err.noneMultipleInitial(JSON.stringify(initialState));
+        if (initialState.length === 0) throw new err.initStateNotInMap(`Initial state provided: ${initialState} || States: ${JSON.stringify(Object.keys(stateMap))}`);
+        if (initialState.length > 1) throw new err.noneMultipleInitial(JSON.stringify(initialState));
     }
 
 
-    _verifyBuildStateTree(){
+
+    _verifyBuildStateTree() {
         let stateTreeNodes = {}
         let initialState = [];
 
+        let root = new StateTreeNode({
+            name: "root",
+            initial: true
+        })
+
         //creating nodes
-        for (let stateName in this.stateMap){
+        for (let stateName in this.stateMap) {
             let state = this.stateMap[stateName];
             stateTreeNodes[stateName] = new StateTreeNode({
                 name: stateName,
@@ -463,99 +496,106 @@ class StateMachine {
 
 
         //setting parents, adding children
-        for (let stateName in stateTreeNodes){
+        for (let stateName in stateTreeNodes) {
             let parent = this.stateMap[stateName].parent
 
-            if(parent){
+            if (parent) {
                 stateTreeNodes[parent].addChild(stateTreeNodes[stateName])
                 stateTreeNodes[stateName].setParent(stateTreeNodes[parent])
+            } else {
+                stateTreeNodes[stateName].setParent(root);
+                root.addChild(stateTreeNodes[stateName]);
             }
         }
 
         //verifying there is only a single root
-        for(let stateName in this.stateMap){
+        for (let stateName in this.stateMap) {
             let state = stateTreeNodes[stateName];
-            if(state.isInitial() && !state.parent){
+            if (state.isInitial() && state.parent === root) {
                 initialState.push(state);
             }
 
             // If no child states or is a concurrent region - continue
-            if (!state.hasChildren() || state.isConcurrent()){
+            if (!state.hasChildren() || state.isConcurrent()) {
                 continue
             }
 
             //verifying that same condition holds for child states
             let localInitial = [];
 
-
-            for (let child of stateTreeNodes[stateName].children){
-                if (child.isInitial()){
-                    localInitial.push(child.name);
+            let substates = stateTreeNodes[stateName].children
+            for (let substateName in substates) {
+                if (substates[substateName].isInitial()) {
+                    localInitial.push(substateName);
                 }
             }
 
-            if(localInitial.length !== 1){
+            if (localInitial.length !== 1) {
                 throw new err.noneMultipleInitial(`parent: ${state.name}, initial: ${localInitial.join()}`)
             }
         }
 
-        if (initialState.length !== 1){
-            throw new err.noneMultipleInitial(`Root level. initial: ${initialState.map((el)=> el.name).join()}`)
+        if (initialState.length !== 1) {
+            throw new err.noneMultipleInitial(`Root level. initial: ${initialState.map((el) => el.name).join()}`)
         }
 
-        return initialState[0];
+        return root;
     }
 
 
-    _getInitialState(){
-        for (let state in this.stateMap){
-            if(this.stateMap[state].initial) return state;
+
+    _getInitialState() {
+        for (let state in this.stateMap) {
+            if (this.stateMap[state].initial) return state;
         }
     }
+
+
 }
 
 
-class StateTreeNode{
+class StateTreeNode {
     constructor({ name,
-                  concurrent = false,
-                  initial = false,
-                  transitions = {},
-                  entryActions = [],
-                  exitActions = [] }){
+        concurrent = false,
+        initial = false,
+        transitions = {},
+        entryActions = [],
+        exitActions = [] }) {
         this.concurrent = concurrent;
         this.name = name;
         this.parent = null;
-        this.children = [];
+        this.children = {};
         this.initial = initial;
         this.entryActions = entryActions;
         this.exitActions = exitActions;
         this.transitions = transitions;
+        this.active = false;
     }
 
-    addChild(childState){
+    addChild(childState) {
         this._checkNodeType(childState)
-        this.children.push(childState)
+        this.children[childState.name] = childState;
     }
 
-    setParent(parent){
+    setParent(parent) {
         this._checkNodeType(parent)
         this.parent = parent
     }
 
-    isConcurrent(){
+    isConcurrent() {
         return this.concurrent;
     }
 
-    isInitial(){
+    isInitial() {
         return this.initial;
     }
 
-    hasChildren(){
+    hasChildren() {
         return this.children.length > 0;
     }
 
-    _checkNodeType(state){
-        if(!(state instanceof StateTreeNode)){
+    _checkNodeType(state) {
+        if (!(state instanceof StateTreeNode)) {
             throw new err.invalidStateNodeType();
         }
     }

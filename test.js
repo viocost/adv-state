@@ -115,6 +115,7 @@ function prepareStateMachine() {
 
 function main(){
     let sm = prepareStateMachine();
+    sm.printStateTree()
 
 }
 

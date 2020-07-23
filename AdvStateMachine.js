@@ -160,7 +160,7 @@
 
 
 const { createDerivedErrorClasses } = require("./DynamicError");
-
+const { inspect } = require("util")
 
 class StateMachineError extends Error{ constructor(details) { super(details); this.name = "StateMachineError" } }
 
@@ -315,7 +315,7 @@ class StateMachine {
         if (this.isInfo()){
             console.log(`${this.name}: Current state: ${this.state}. `)
             if(this.isDebug())
-                console.log(`   Processing event ${eventName}(${JSON.stringify(eventArgs)})`);
+                console.log(`   Processing event ${eventName}(${inspect(eventArgs)})`);
         }
 
         if (!(eventName in this.stateMap[this.state].transitions)){
@@ -388,7 +388,7 @@ class StateMachine {
                 res.add(event)
             }
         }
-        if(this.isInfo()) console.log(`${this.name} recognizes events ${JSON.stringify(Array.from(res))}`)
+        if(this.isInfo()) console.log(`${this.name} recognizes events ${inspect(Array.from(res))}`)
         return res;
     }
 
@@ -430,8 +430,8 @@ class StateMachine {
         }
 
         //Verify state map
-        if(initialState.length === 0) throw new err.initStateNotInMap(`Initial state provided: ${initialState} || States: ${JSON.stringify(Object.keys(stateMap))}`);
-        if(initialState.length > 1) throw new err.multipleInitialStates(JSON.stringify(initialState));
+        if(initialState.length === 0) throw new err.initStateNotInMap(`Initial state provided: ${initialState} || States: ${inspect(Object.keys(stateMap))}`);
+        if(initialState.length > 1) throw new err.multipleInitialStates(inspect(initialState));
     }
 
     getInitialState(){
@@ -444,8 +444,14 @@ class StateMachine {
 
 
 
+const SMTraceLevel = {
+    NONE: Symbol("none"),
+    INFO: Symbol("info"),
+    DEBUG: Symbol("debug")
+}
 
 
 module.exports = {
-    StateMachine: StateMachine
+    StateMachine: StateMachine,
+    SMTraceLevel: SMTraceLevel
 }

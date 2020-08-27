@@ -549,58 +549,65 @@ class StateMachine {
         }
 
         //verifying there is only a single root
-        for (let stateName in this.stateMap) {
-            let state = stateTreeNodes[stateName];
-            if (state.isInitial() && state.parent === root) {
-                initialState.push(state);
-            }
+        /////////////////////////////////////////////////////////////////////////////////////////////////////////
+        // for (let stateName in this.stateMap) {                                                              //
+        //     let state = stateTreeNodes[stateName];                                                          //
+        //     if (state.isInitial() && state.parent === root) {                                               //
+        //         initialState.push(state);                                                                   //
+        //     }                                                                                               //
+        //                                                                                                     //
+        //     // If no child states or is a concurrent region - continue                                      //
+        //     if (!state.hasChildren() || state.isRegion()) {                                                 //
+        //         continue                                                                                    //
+        //     }                                                                                               //
+        //                                                                                                     //
+        //     //verifying that same condition holds for child states                                          //
+        //     let localInitial = [];                                                                          //
+        //                                                                                                     //
+        //     let substates = stateTreeNodes[stateName].children                                              //
+        //     for (let substateName in substates) {                                                           //
+        //         if (substates[substateName].isInitial()) {                                                  //
+        //             localInitial.push(substateName);                                                        //
+        //         }                                                                                           //
+        //     }                                                                                               //
+        //                                                                                                     //
+        //     if (localInitial.length !== 1) {                                                                //
+        //         throw new err.noneMultipleInitial(`parent: ${state.name}, initial: ${localInitial.join()}`) //
+        //     }                                                                                               //
+        // }                                                                                                   //
+        /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-            // If no child states or is a concurrent region - continue
-            if (!state.hasChildren() || state.isRegion()) {
-                continue
-            }
-
-            //verifying that same condition holds for child states
-            let localInitial = [];
-
-            let substates = stateTreeNodes[stateName].children
-            for (let substateName in substates) {
-                if (substates[substateName].isInitial()) {
-                    localInitial.push(substateName);
-                }
-            }
-
-            if (localInitial.length !== 1) {
-                throw new err.noneMultipleInitial(`parent: ${state.name}, initial: ${localInitial.join()}`)
-            }
-        }
-
-        if (initialState.length !== 1) {
-            throw new err.noneMultipleInitial(`Root level. initial: ${initialState.map((el) => el.name).join()}`)
-        }
+        ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        // if (initialState.length !== 1) {                                                                          //
+        //     throw new err.noneMultipleInitial(`Root level. initial: ${initialState.map((el) => el.name).join()}`) //
+        // }                                                                                                         //
+        ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-        //verify there is at least one initial state at each level
-
-
-
-
+        //verify there is exactly one initial state at each level
+        this._verifyInitial(root)
         return root;
     }
 
+    _stateNodesCount(root, stateNodesVisited){
+        stateNodesVisited++
+
+        for(let stateName in root.children){
+            stateNodesVisited += this._stateNodesCount(root.children[stateName], 0)
+        }
+        return stateNodesVisited;
+    }
 
     _verifyInitial(root){
-        if(root.hasChildren()){
-            if(Object.keys(root.children).filter(stateName=>{
-                return root.children.initial
-            }).length !== 1) throw new err.noneMultipleInitial(root.name)
+        if(!root.region && root.hasChildren() && Object.keys(root.children).filter(stateName=>{
+            return root.children[stateName].isInitial()
+        }).length !== 1){
+           throw new err.noneMultipleInitial(root.name)
+        }
 
-            for(let stateName in root.children){
-                let child = root.children[stateName];
-                if (child.initial){
-                    this._verifyInitial(child)
-                }
-            }
+        for(let stateName in root.children){
+            let child = root.children[stateName];
+            this._verifyInitial(child)
         }
     }
 
@@ -654,7 +661,7 @@ class StateTreeNode {
     }
 
     hasChildren() {
-        return this.children.length > 0;
+        return Object.keys(this.children).length > 0;
     }
 
     setActive(isActive){

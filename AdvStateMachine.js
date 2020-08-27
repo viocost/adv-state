@@ -233,8 +233,7 @@ class StateMachine {
         let initialEntryActions =  this.stateMap[this.getInitialState()].entry;
         if(initialEntryActions) {
             this.performActions(initialEntryActions, "Initial entry", undefined, undefined);
-
-        } 
+        }
 
 
         this.handle = new Proxy(this, {
@@ -301,7 +300,14 @@ class StateMachine {
         return res;
     }
 
+    /**
+     * This function is called whenever stateMachine.handle.someTransition() called
+     * If the event doesn't require a state transition, then only guards and actions are
+     * executed, otherwise, state exit actions and new state entry actions will be executed
+     */
     processEvent(eventName, eventArgs) {
+
+
 
         ///////////////////////////////////////
         // if I will change state            //

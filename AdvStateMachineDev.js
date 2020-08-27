@@ -1,16 +1,36 @@
 /*
  * State map constraints
  *
- * 1. Any state can be either leaf state or region
- * 2. Region state must have property region: true
- * 3. There must be exactly ONE region or state that is root.
- * 4. Any region can be either concurrent or non-concurrent
- * 5. Non-concurrent region has exactly one active child state when active
- * 6. Concurrent region assumes to have one or more child regions
- * 7. In concurrent region when active all its children regions are active
- * 8. Concurrent region cannot have leaf states as children
- * 9. Non-concurrent region can have memory enabled, so when re-entered, the state will be set to where it left off.
- * 10. By default a region considered to be non-concurrent. To make region concurrent need to set concurrent: true in state map.
+ *
+ * 1. States can be regular states or regions.
+ * 2. Region means concurrent, thus if active, all of its children are active too
+ * 3. Region state must have property region: true
+ * 4. If state is active and has children, then there must be an active child
+ * 5. There must be exactly ONE region or state that is root.
+ * 6. Non-concurrent region can have memory enabled, so when re-entered, the state will be set to where it left off.
+ * 7. Transition to another state may only happen within the parent node
+ *
+ *
+ *
+ * 1. Transition algorithm
+ *
+ * function transite
+ *     if no_children:
+ *         if transition_found :
+ *             if new_state:
+ *                 perform exit action
+ *             perform_transition
+ *     else:
+ *         forEach active child:
+ *                transite()
+ *         if new_state:
+ *             perform exit action
+ *         perform transition
+ *
+ *    
+ * 
+ *
+ *
  *
  *
  * Example:
@@ -228,13 +248,15 @@ class StateMachine {
         //root state
         this._rootState = this._verifyBuildStateTree();
 
-        return
 
-        let initialEntryActions = this.state.entryActions
-        if (initialEntryActions) {
-            this._performActions(initialEntryActions, "Initial entry", undefined, undefined);
 
-        }
+        ///////////////////////////////////////////////////////////////////////////////////////////
+        // let initialEntryActions = this.state.entryActions                                     //
+        // if (initialEntryActions) {                                                            //
+        //     this._performActions(initialEntryActions, "Initial entry", undefined, undefined); //
+        //                                                                                       //
+        // }                                                                                     //
+        ///////////////////////////////////////////////////////////////////////////////////////////
 
 
         this.handle = new Proxy(this, {
@@ -259,6 +281,20 @@ class StateMachine {
                 throw new err.illegalEventName(`${prop}`)
             }
         });
+
+        this.initialize(this._rootState)
+        this.printStateTree()
+    }
+
+    initialize(root){
+        for (let childName in root.children){
+            let child = root.children[childName];
+            if (root.region || child.isInitial()){
+                child.setActive(true)
+                this._performActions(child.entryActions, this.context)
+                this.initialize(child)
+            }
+        }
     }
 
 
@@ -478,7 +514,8 @@ class StateMachine {
 
         let root = new StateTreeNode({
             name: "root",
-            initial: true
+            initial: true,
+            active: true
         })
 
         //creating nodes
@@ -486,7 +523,7 @@ class StateMachine {
             let state = this.stateMap[stateName];
             stateTreeNodes[stateName] = new StateTreeNode({
                 name: stateName,
-                concurrent: state.concurrent,
+                region: state.region,
                 initial: state.initial,
                 transitions: state.transitions,
                 entryActions: state.entry,
@@ -500,6 +537,9 @@ class StateMachine {
             let parent = this.stateMap[stateName].parent
 
             if (parent) {
+                if(!(parent in stateTreeNodes)){
+                    throw new err.stateNotExist(parent)
+                }
                 stateTreeNodes[parent].addChild(stateTreeNodes[stateName])
                 stateTreeNodes[stateName].setParent(stateTreeNodes[parent])
             } else {
@@ -516,7 +556,7 @@ class StateMachine {
             }
 
             // If no child states or is a concurrent region - continue
-            if (!state.hasChildren() || state.isConcurrent()) {
+            if (!state.hasChildren() || state.isRegion()) {
                 continue
             }
 
@@ -539,7 +579,29 @@ class StateMachine {
             throw new err.noneMultipleInitial(`Root level. initial: ${initialState.map((el) => el.name).join()}`)
         }
 
+
+        //verify there is at least one initial state at each level
+
+
+
+
         return root;
+    }
+
+
+    _verifyInitial(root){
+        if(root.hasChildren()){
+            if(Object.keys(root.children).filter(stateName=>{
+                return root.children.initial
+            }).length !== 1) throw new err.noneMultipleInitial(root.name)
+
+            for(let stateName in root.children){
+                let child = root.children[stateName];
+                if (child.initial){
+                    this._verifyInitial(child)
+                }
+            }
+        }
     }
 
 
@@ -556,12 +618,13 @@ class StateMachine {
 
 class StateTreeNode {
     constructor({ name,
-        concurrent = false,
+        region = false,
         initial = false,
         transitions = {},
+        active = false,
         entryActions = [],
         exitActions = [] }) {
-        this.concurrent = concurrent;
+        this.region = region;
         this.name = name;
         this.parent = null;
         this.children = {};
@@ -569,7 +632,7 @@ class StateTreeNode {
         this.entryActions = entryActions;
         this.exitActions = exitActions;
         this.transitions = transitions;
-        this.active = false;
+        this.active = active;
     }
 
     addChild(childState) {
@@ -582,8 +645,8 @@ class StateTreeNode {
         this.parent = parent
     }
 
-    isConcurrent() {
-        return this.concurrent;
+    isRegion() {
+        return this.region;
     }
 
     isInitial() {
@@ -594,11 +657,18 @@ class StateTreeNode {
         return this.children.length > 0;
     }
 
+    setActive(isActive){
+        this.active = isActive;
+    }
+
     _checkNodeType(state) {
         if (!(state instanceof StateTreeNode)) {
             throw new err.invalidStateNodeType();
         }
     }
+
+
+
 }
 
 

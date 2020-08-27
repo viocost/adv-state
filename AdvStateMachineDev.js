@@ -210,6 +210,8 @@ const err = createDerivedErrorClasses(StateMachineError, {
     actionTypeInvalid: "ActionTypeInvalid",
     cannotDetermineAction: "CannotDetermineValidAction",
     invalidStateNodeType: "InvalidStateTreeNodeType",
+    inactiveState: "AttemptToProcessEventOnInactiveState",
+    attemptToSwitchFromRootState: "AttemptToSwitchFromRootState"
 })
 
 
@@ -282,17 +284,17 @@ class StateMachine {
             }
         });
 
-        this.initialize(this._rootState)
+        this.activateState(this._rootState)
         this.printStateTree()
     }
 
-    initialize(root){
+    activateState(root){
         for (let childName in root.children){
             let child = root.children[childName];
             if (root.region || child.isInitial()){
                 child.setActive(true)
                 this._performActions(child.entryActions, this.context)
-                this.initialize(child)
+                this.activateState(child)
             }
         }
     }
@@ -357,7 +359,7 @@ class StateMachine {
 
     }
 
-    processEvent(eventName, eventArgs) {
+    processEvent(rootState, eventName, eventArgs, changeState) {
 
         ///////////////////////////////////////
         // if I will change state            //
@@ -383,6 +385,34 @@ class StateMachine {
                 console.log(`   Processing event ${eventName}(${JSON.stringify(eventArgs)})`);
         }
 
+        if(!rootState.isActive()){
+            throw new err.inactiveState(rootState.name)
+        }
+
+        if(rootState.hasTransition(eventName) && rootState.transitions[eventName].state){
+            //check of state change is legal
+            let newState = rootState.transitions[eventName].state
+            if(!rootState.parent) throw new err.attemptToSwitchFromRootState()
+            if(!rootState.parent.hasSubstate(newState)){
+                throw new err.stateNotExist(`Substate ${newState} of ${rootState.parent.name} not exist`)
+            }
+            changeState = true;
+        }
+
+
+        for(let stateName in rootState.children){
+            let childState = rootState.children[stateName];
+            if(rootState.isRegion() || childState.isActive()){
+                this.processEvent(childState, eventName, eventArgs, changeState)
+            }
+        }
+
+        if(changeState && rootState.exitActions){
+            this._performActions(rootState.exitActions, this.obj, eventName, eventArgs);
+            this.setActive(false)
+        }
+
+
 
         //////////////////////////////////////////////////////////////////
         // if (!(eventName in this.stateMap[this.state].transitions)) { //
@@ -390,10 +420,10 @@ class StateMachine {
         //     return;                                                  //
         // }                                                            //
         //////////////////////////////////////////////////////////////////
-        if(!this._isEventLegal(eventName)){
-             this.msgNotExistMode(eventName, this.name);
-             return;
-        }
+
+
+
+
 
         let eventDescription = this.getEventDescription(eventName, eventArgs);
 
@@ -449,7 +479,6 @@ class StateMachine {
             }
             action.call(this.obj, this, eventName, eventArgs);
         }
-
     }
 
     _generateEventNames() {
@@ -666,6 +695,14 @@ class StateTreeNode {
 
     setActive(isActive){
         this.active = isActive;
+    }
+
+    hasTransition(transitionName){
+        return this.transitions.hasOwnProperty(transitionName)
+    }
+
+    hasSubstate(state){
+        return this.children.hasOwnProperty(state)
     }
 
     _checkNodeType(state) {

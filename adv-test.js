@@ -9,6 +9,7 @@ let sm = new StateMachine(null, {
         },
 
         powerOn: {
+            entry: ()=>{console.log("Entry powerOn")},
             initial: true,
             transitions: {
                 setPowerOff: {
@@ -18,6 +19,7 @@ let sm = new StateMachine(null, {
         },
 
         illumination: {
+            entry: ()=>{console.log("Entry illumination")},
             initial: true,
             parent: "powerOn",
             transitions: {
@@ -43,6 +45,8 @@ let sm = new StateMachine(null, {
 
         illuminationOff: {
             initial: true,
+            entry: ()=>{console.log("Entry illuminationOff")},
+            exit: ()=>{console.log("exit illuminationOff")},
             parent: "illumination",
             transitions: {
                 setIlluminationOn: {

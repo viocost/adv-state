@@ -16,5 +16,12 @@
     "url": "https://github.com/viocost/adv-state/issues"
   },
   "homepage": "https://github.com/viocost/adv-state#readme",
-  "dependencies": {}
+  "dependencies": {
+    "obs-bus": "^1.0.3"
+  },
+  "devDependencies": {
+    "prettier": "^2.3.2",
+    "ts-node": "^10.2.1",
+    "typescript": "^4.4.2"
+  }
 }

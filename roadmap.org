@@ -1,0 +1,7 @@
+* Roadmap [0/6]
+** TODO Migrate to typescript
+** TODO Add code structure
+** TODO Implement context
+** TODO Integrate message bus
+** TODO Implement hierarchical state (low priority)
+** TODO Implement defensive handling i.e. machine never blows up

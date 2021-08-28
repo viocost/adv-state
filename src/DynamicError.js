@@ -1,4 +1,3 @@
-
 // This creates Derived extends Base {constructor(v) {super(v); }} for each
 // member of targets. This is intended for making Error() derived classes that
 // just pass a single arg as a quick and easy way to avoid that repetition.
@@ -25,14 +24,21 @@
 // NOTICE: it used the right LONG name, even though called with the short. So consumers
 // of the exceptions can catch the real target.
 function createDerivedErrorClasses(base, targets) {
-    result = {};
-    for (let short of Object.getOwnPropertyNames(targets)) {
-        const long = targets[short];
-        result[short] = ({ [long]: class extends base { constructor(v) { super(v); this.name = long} } })[long];
-    }
-    return result;
+  let result = {};
+  for (let short of Object.getOwnPropertyNames(targets)) {
+    const long = targets[short];
+    result[short] = {
+      [long]: class extends base {
+        name;
+        constructor(v) {
+          super(v);
+          this.name = long;
+        }
+      },
+    }[long];
+  }
+  return result;
 }
-
 
 /* USAGE EXAMPLE
 class TypeAnnotationError extends Error { constructor(detail) { super(detail); } };
@@ -56,5 +62,5 @@ const err = create_derived_error_classes(TypeAnnotationError, {
 */
 
 module.exports = {
-    createDerivedErrorClasses: createDerivedErrorClasses
-}
+  createDerivedErrorClasses,
+};

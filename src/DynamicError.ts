@@ -23,15 +23,18 @@
 */
 // NOTICE: it used the right LONG name, even though called with the short. So consumers
 // of the exceptions can catch the real target.
-function createDerivedErrorClasses(base, targets) {
+export default function createDerivedErrorClasses<T = any>(
+  base: any,
+  targets: { [key: string]: string }
+) {
   let result = {};
   for (let short of Object.getOwnPropertyNames(targets)) {
     const long = targets[short];
     result[short] = {
       [long]: class extends base {
-        name;
-        constructor(v) {
-          super(v);
+        name: string;
+        constructor(errMsg?: string) {
+          super(errMsg);
           this.name = long;
         }
       },
@@ -60,7 +63,3 @@ const err = create_derived_error_classes(TypeAnnotationError, {
     prop_not_fetchable: "UnableToFetchPropertyFromType"
 });
 */
-
-module.exports = {
-  createDerivedErrorClasses,
-};

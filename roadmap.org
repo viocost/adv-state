@@ -1,7 +1,14 @@
-* Roadmap [0/6]
+* Roadmap [1/9]
 ** TODO Migrate to typescript
 ** TODO Add code structure
-** TODO Implement context
+** DONE Implement context
+CLOSED: [2021-08-29 Sun 13:22]
+There shouldn't be any context, that is what argumetns used for.
+
 ** TODO Integrate message bus
 ** TODO Implement hierarchical state (low priority)
 ** TODO Implement defensive handling i.e. machine never blows up
+** TODO Implement auto message sending interface
+** TODO Emit xstate visualization
+*** TODO Implement visitor
+** TODO Decouple from obs-bus

@@ -12,16 +12,8 @@ function prepareStateMachine() {
             turn: [
               {
                 state: "left",
-
-                actions: [
-                  (sm, ev, args) => {
-                    console.log(t);
-                  },
-                  () => {
-                    console.log("bar");
-                  },
-                ],
                 guards: [() => true, () => true, () => true],
+                message: "process_left",
               },
               {
                 state: "right",

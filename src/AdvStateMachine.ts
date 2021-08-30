@@ -63,14 +63,15 @@ export class StateMachine implements IStateMachine {
   messageBus: SMMessageBus;
 
   handle = new Proxy(this, {
-    get(target: StateMachine, prop): any {
+    get(target: StateMachine, prop: string): Function {
+      console.log(`Received event ${prop}`);
       if (target.error) throw new err.blown(target.error);
       if (target.legalEvents.has(prop))
-        return (...args) => {
+        return (payload?: any) => {
           setImmediate(() => {
             if (target.error) return;
             try {
-              target.processEvent(prop, args);
+              target.processEvent(prop, payload);
             } catch (err) {
               target.error = err;
               console.warn(
@@ -109,34 +110,24 @@ export class StateMachine implements IStateMachine {
     this.name = name ? name : STATE_MACHINE_DEFAULT_NAME;
     this.msgNotExistMode = msgNotExistMode;
     this.stateMap = new Proxy(stateMap, {
-      get(target, prop) {
+      get(target, prop: string) {
         if (!(prop in target)) throw new err.stateNotExist(prop);
         return target[prop];
       },
     });
 
     this.legalEvents = this.generateEventNames();
+  }
 
-    this.state = this.getInitialState(stateMap);
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // let entryNewState = this.stateMap[initialState].entry;                                                                                 //
-    // if (typeof entryNewState === "function") {                                                                                             //
-    //     if(this.trace) console.log(`%c ${this.name}: Calling entry action for "${initialState}"`,  'color: #009933;  font-weight: 600; '); //
-    //     entryNewState();                                                                                                                   //
-    // }                                                                                                                                      //
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-    let initialEntryActions =
-      this.stateMap[this.getInitialState(stateMap)].entry;
-    if (initialEntryActions) {
-      this.performActions(
-        initialEntryActions,
-        "Initial entry",
-        undefined,
-        undefined
-      );
-    }
+  run() {
+    const initialState = this.getInitialState(this.stateMap);
+    this.setNewState(initialState);
+    this.performActions(
+      this.actionsAsArray(this.stateMap[initialState].entry),
+      "Initial entry",
+      "Initial entry",
+      undefined
+    );
   }
 
   update(message: SMMessageBusMessage) {

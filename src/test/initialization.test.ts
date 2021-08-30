@@ -9,6 +9,8 @@ describe("Basic initialization", () => {
         },
       },
     });
+
+    sm.run();
     expect(sm).toBeDefined();
     expect(sm.name).toBe("State machine");
     expect(sm.state === "start");
@@ -23,10 +25,10 @@ describe("Basic initialization", () => {
         },
       },
     });
+
+    sm.run();
     expect(sm).toBeDefined();
     expect(sm.name).toBe("FOO");
     expect(sm.state === "start");
   });
 });
-
-describe("When handle function is called", () => {});

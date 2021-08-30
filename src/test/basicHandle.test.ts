@@ -19,12 +19,13 @@ describe("Basic handle tests", () => {
   const sm = new StateMachine({
     messageBus: fakeBus,
     traceLevel: SMTraceLevel.Debug,
+
     stateMap: {
       start: {
         initial: true,
 
         events: {
-          "start-done": {
+          startDone: {
             toState: "middle",
             message: "to-middle",
           },
@@ -45,11 +46,12 @@ describe("Basic handle tests", () => {
       },
     },
   });
+  sm.run();
 
   describe("When handle with existing event called", () => {
     beforeAll(() => {
       return new Promise((resolve, reject) => {
-        sm.handle["start-done"](fakePayload);
+        sm.handle.startDone();
         setTimeout(resolve, 1000);
       });
     });

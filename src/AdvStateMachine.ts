@@ -3,10 +3,13 @@ import {
   IStateMachine,
   StateMachineConfig,
   StateMap,
+  SMEvent,
+  SMAction,
   SMMessageName,
   SMMessageBusMessage,
   SMTraceLevel,
   SMMessageBus,
+  EventDescription,
 } from "./types";
 import createDerivedErrorClasses from "./DynamicError";
 import { inspect } from "util";
@@ -141,7 +144,7 @@ export class StateMachine implements IStateMachine {
     this.handle[messageName](payload);
   }
 
-  getEventDescription(eventName: SMMessageName, eventArgs) {
+  getEventDescription(eventName: SMEvent, eventArgs?: any) {
     if (!(eventName in this.stateMap[this.state].events)) {
       this.msgNotExistMode(eventName, this.name);
       return;
@@ -156,18 +159,18 @@ export class StateMachine implements IStateMachine {
     if (descriptions.length > 1) {
       this.error = true;
       throw new err.cannotDetermineAction(
-        `For ${eventName}. Multiple actions' guards passed`
+        `For ${String(eventName)}. Multiple actions' guards passed`
       );
     }
 
-    this.logEventDescription(descriptions[0]);
+    this.logEventDescription(eventName, descriptions[0]);
 
     return descriptions[0];
   }
 
-  logEventDescription(eventDescription?) {
+  logEventDescription(eventName: SMEvent, eventDescription?: EventDescription) {
     if (undefined === eventDescription && this.isInfo()) {
-      console.log(`  NO VALID ACTION FOUND for ${eventName}`);
+      console.log(`  NO VALID ACTION FOUND for ${String(eventName)}`);
     }
   }
 
@@ -195,57 +198,85 @@ export class StateMachine implements IStateMachine {
    * If the event doesn't require a state transition, then only guards and actions are
    * executed, otherwise, state exit actions and new state entry actions will be executed
    */
-  processEvent(eventName, eventArgs?: any) {
-    ///////////////////////////////////////
-    // if I will change state            //
-    //   call exit actions               //
-    // call transition actions           //
-    // if  I will change state           //
-    //   change state                    //
-    //   call entry actions on new state //
-    ///////////////////////////////////////
-
+  processEvent(eventName: SMEvent, eventArgs?: any) {
     this.logProcessEventStart(eventName, eventArgs);
 
     let eventDescription = this.getEventDescription(eventName, eventArgs);
+    this.executeEvent(eventDescription, eventName, eventArgs);
+  }
 
-    let actions = eventDescription["actions"];
-    let newState = eventDescription["toState"];
+  private executeEvent(
+    eventDescription: EventDescription,
+    eventName: SMEvent,
+    eventArgs?: any
+  ) {
+    const { actions, toState: newState } = eventDescription;
 
-    if (newState) {
-      if (!(newState in this.stateMap)) {
-        this.error = true;
-        throw new err.stateNotExist(newState);
-      }
+    this.performExitActionsOnTransition(eventName, newState, eventArgs);
 
-      let exitActions = this.stateMap[this.state].exit;
-
-      if (exitActions)
-        this.performActions(exitActions, "exit", eventName, eventArgs);
-    }
-
-    if (actions)
-      this.performActions(actions, "transition", eventName, eventArgs);
+    this.performActions(
+      this.actionsAsArray(actions),
+      "transition",
+      eventName,
+      eventArgs
+    );
 
     this.sendMessage(eventName, eventArgs);
 
-    //Setting new state
-    if (newState) {
-      let entryActions = this.stateMap[newState].entry;
-      this.state = newState;
-      if (this.isInfo())
-        console.log(
-          `%c ${this.name}: State is now set to ${String(this.state)}`,
-          "color: #3502ff; font-size: 10px; font-weight: 600; "
-        );
-      if (entryActions)
-        this.performActions(entryActions, "entry", eventName, eventArgs);
+    this.setNewState(newState);
+
+    this.performActions(
+      this.actionsAsArray(this.stateMap[newState].entry),
+      "entry",
+      eventName,
+      eventArgs
+    );
+  }
+
+  private setNewState(newState: SMState) {
+    this.state = newState;
+    this.logStateTransition(newState);
+  }
+
+  private logStateTransition(newState) {
+    if (this.isInfo())
+      console.log(
+        `%c ${this.name}: State is now set to ${String(this.state)}`,
+        "color: #3502ff; font-size: 10px; font-weight: 600; "
+      );
+  }
+
+  performExitActionsOnTransition(
+    eventName: SMEvent,
+    newState?: SMState,
+    eventArgs?: any
+  ) {
+    if (!newState) {
+      return;
+    }
+
+    this.ensureLegalState(newState as SMState);
+
+    this.performActions(
+      this.actionsAsArray(this.stateMap[this.state].exit),
+      "exit",
+      eventName,
+      eventArgs
+    );
+  }
+
+  actionsAsArray(actions?: SMAction | Array<SMAction>) {
+    return actions ? asArray<SMAction>(actions) : [];
+  }
+
+  ensureLegalState(state: SMState) {
+    if (!(state in this.stateMap)) {
+      this.error = true;
+      throw new err.stateNotExist(state);
     }
   }
 
-  canTransition(): boolean {}
-
-  logProcessEventStart(eventName, eventArgs) {
+  logProcessEventStart(eventName: SMEvent, eventArgs?: any) {
     if (this.isInfo()) {
       console.log(`${this.name}: Current state: ${String(this.state)}. `);
       if (this.isDebug())
@@ -253,13 +284,18 @@ export class StateMachine implements IStateMachine {
     }
   }
 
-  sendMessage(eventName, eventArgs) {
+  sendMessage(eventName: SMEvent, eventArgs: any) {
     if (!this.messageBus) return;
 
     this.messageBus.deliver([eventName, eventArgs], this);
   }
 
-  performActions(actions, context, eventName, eventArgs) {
+  performActions(
+    actions: Array<SMAction>,
+    context: string,
+    eventName: SMEvent,
+    eventArgs?: any
+  ) {
     if (this.isDebug()) {
       console.log(
         `%c ${this.name}: Calling actions for ${context} || Event name: ${eventName} `,

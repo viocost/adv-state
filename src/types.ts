@@ -2,9 +2,9 @@ export interface IStateMachine {}
 
 export type SMErrorHandler = (error: Error) => any;
 
-export type SMEvent = string | symbol | number;
+export type SMEvent = string | number;
 
-export type SMState = string | symbol | number;
+export type SMState = string | number;
 
 export type SMContext = {};
 
@@ -21,14 +21,14 @@ export type SMGuard<TData = any> = (
 ) => boolean;
 
 export type EventDescription = {
-  toState?: string | symbol | number;
+  toState?: string | number;
   actions?: SMAction | Array<SMAction>;
   guards?: SMGuard | Array<SMGuard>;
   message?: SMMessageName;
 };
 
 export type SMEvents = {
-  [key: string | symbol | number]: EventDescription | Array<EventDescription>;
+  [key: SMEvent]: EventDescription | Array<EventDescription>;
 };
 
 /**
@@ -61,7 +61,7 @@ export type StateDescription = {
  * Main state configuration for the state machine. See StateDescription
  */
 export type StateMap = {
-  [key: string | symbol | number]: StateDescription;
+  [key: SMState]: StateDescription;
 };
 
 export type StateMachineConfig = {

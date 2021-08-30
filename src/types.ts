@@ -20,16 +20,15 @@ export type SMGuard<TData = any> = (
   stateMachine: IStateMachine
 ) => boolean;
 
-export type TransitionDescription = {
-  state: string | symbol | number;
-  actions: SMAction | Array<SMAction>;
-  guards: SMGuard | Array<SMGuard>;
+export type EventDescription = {
+  toState?: string | symbol | number;
+  actions?: SMAction | Array<SMAction>;
+  guards?: SMGuard | Array<SMGuard>;
+  message?: SMMessageName;
 };
 
-export type Transitions = {
-  [key: string | symbol | number]:
-    | TransitionDescription
-    | Array<TransitionDescription>;
+export type SMEvents = {
+  [key: string | symbol | number]: EventDescription | Array<EventDescription>;
 };
 
 /**
@@ -53,9 +52,9 @@ export type StateDescription = {
   exit?: SMAction | Array<SMAction>;
 
   /**
-   * Set of transitions: see Transitions
+   * Set of transitions: see SMEvents
    */
-  transitions?: Transitions;
+  events?: SMEvents;
 };
 
 /**
@@ -66,6 +65,11 @@ export type StateMap = {
 };
 
 export type StateMachineConfig = {
+  /**
+   * See StateMap
+   */
+  stateMap: StateMap;
+
   /**
    * Human readable name for the state machine
    */
@@ -85,9 +89,16 @@ export type StateMachineConfig = {
   onCrash?: CrashActionDescriptor;
 
   /**
-   * See StateMap
+   * Specifies verbosity of a state machine
    */
-  stateMap: StateMap;
+  traceLevel?: SMTraceLevel;
+
+  /**
+   * Defines behavior when non-existant in current state message recieved
+   */
+  msgNotExistMode?: Function;
+
+  contextObject?: Object | null;
 };
 
 /**
@@ -103,17 +114,29 @@ export type CrashActionDescriptor = {
 };
 
 export type SMMessageName = string | number;
+export type SMMessageBusMessage = [message: SMMessageName, payload?: any];
 
 export interface SMMessageBus<TMesg = any> {
   subscribe(message?: TMesg): void;
+  deliver(
+    message: SMMessageBusMessage,
+    contextObject: Object,
+    channel?: any
+  ): void;
 }
 
 export interface IStateMachine {
   handle: Object;
 }
 
-export const SMTraceLevel = {
-  None: Symbol("none"),
-  Info: Symbol("info"),
-  Debug: Symbol("debug"),
-};
+export enum SMTraceLevel {
+  None,
+  Info,
+  Debug,
+}
+
+export enum SMMessageNotExistMode {
+  Discard,
+  Info,
+  Die,
+}

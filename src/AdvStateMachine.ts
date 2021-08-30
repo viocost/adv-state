@@ -1,7 +1,17 @@
-import { SMState, IStateMachine, StateMap, SMTraceLevel } from "./types";
+import {
+  SMState,
+  IStateMachine,
+  StateMachineConfig,
+  StateMap,
+  SMMessageName,
+  SMMessageBusMessage,
+  SMTraceLevel,
+  SMMessageBus,
+} from "./types";
 import createDerivedErrorClasses from "./DynamicError";
 import { inspect } from "util";
-//const { inspect } = require("util")
+
+export const STATE_MACHINE_DEFAULT_NAME = "State machine";
 
 class StateMachineError extends Error {
   constructor(details) {
@@ -20,12 +30,12 @@ const err = createDerivedErrorClasses<StateMachineError>(StateMachineError, {
   illegalEventName: "IllegalEventName",
   actionTypeInvalid: "ActionTypeInvalid",
   cannotDetermineAction: "CannotDetermineValidAction",
-}) as any;
+});
 
 /**
  *
  * Actions
- *   array of lambdas passed to the transitions
+ *   array of lambdas passed to the events
  *   Each will be called with
  *     StateMachine, EventName, EventArgs
  */
@@ -40,17 +50,17 @@ export class StateMachine implements IStateMachine {
   }
 
   private traceLevel = SMTraceLevel.None;
-
-  obj: Object;
+  name: string = STATE_MACHINE_DEFAULT_NAME;
+  contextObject: Object;
   error: any;
   legalEvents: any;
-  name: string;
   stateMap: StateMap;
   msgNotExistMode: Function;
   state: SMState;
+  messageBus: SMMessageBus;
 
   handle = new Proxy(this, {
-    get(target: StateMachine, prop) {
+    get(target: StateMachine, prop): any {
       if (target.error) throw new err.blown(target.error);
       if (target.legalEvents.has(prop))
         return (...args) => {
@@ -72,23 +82,28 @@ export class StateMachine implements IStateMachine {
 
       throw new err.illegalEventName(`${String(prop)}`);
     },
-  });
+  }) as any;
 
-  constructor(
-    obj,
-    { stateMap, name = "State Machine" },
-    {
-      msgNotExistMode = StateMachine.Discard,
-      traceLevel = SMTraceLevel.Info,
-    } = {}
-  ) {
+  constructor({
+    name,
+    stateMap,
+    messageBus = null,
+    contextObject = null,
+    msgNotExistMode = StateMachine.Discard,
+    traceLevel = SMTraceLevel.Info,
+  }: StateMachineConfig) {
     this.validateStateMap(stateMap);
 
-    this.obj = obj;
+    this.contextObject = contextObject;
+
+    if (messageBus) {
+      this.messageBus = messageBus;
+      messageBus.subscribe(this);
+    }
 
     this.error = false;
     this.traceLevel = traceLevel;
-    this.name = name;
+    this.name = name ? name : STATE_MACHINE_DEFAULT_NAME;
     this.msgNotExistMode = msgNotExistMode;
     this.stateMap = new Proxy(stateMap, {
       get(target, prop) {
@@ -99,7 +114,7 @@ export class StateMachine implements IStateMachine {
 
     this.legalEvents = this.generateEventNames();
 
-    this.state = this.getInitialState();
+    this.state = this.getInitialState(stateMap);
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // let entryNewState = this.stateMap[initialState].entry;                                                                                 //
@@ -109,7 +124,8 @@ export class StateMachine implements IStateMachine {
     // }                                                                                                                                      //
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    let initialEntryActions = this.stateMap[this.getInitialState()].entry;
+    let initialEntryActions =
+      this.stateMap[this.getInitialState(stateMap)].entry;
     if (initialEntryActions) {
       this.performActions(
         initialEntryActions,
@@ -120,27 +136,39 @@ export class StateMachine implements IStateMachine {
     }
   }
 
-  getEventDescription(eventName, eventArgs) {
-    let descriptions = this.stateMap[this.state].transitions[eventName];
+  update(message: SMMessageBusMessage) {
+    const [messageName, payload] = message;
+    this.handle[messageName](payload);
+  }
 
-    if (!Array.isArray(descriptions)) {
-      descriptions = [descriptions];
+  getEventDescription(eventName: SMMessageName, eventArgs) {
+    if (!(eventName in this.stateMap[this.state].events)) {
+      this.msgNotExistMode(eventName, this.name);
+      return;
     }
 
-    let res = [];
+    let descriptions = asArray(
+      this.stateMap[this.state].events[eventName]
+    ).filter((description) =>
+      this.areGuardsPassed(description, eventName, eventArgs)
+    );
 
-    for (let desc of descriptions) {
-      if (this.areGuardsPassed(desc, eventName, eventArgs)) res.push(desc);
-    }
-
-    if (res.length > 1) {
+    if (descriptions.length > 1) {
       this.error = true;
       throw new err.cannotDetermineAction(
         `For ${eventName}. Multiple actions' guards passed`
       );
     }
 
-    return res[0];
+    this.logEventDescription(descriptions[0]);
+
+    return descriptions[0];
+  }
+
+  logEventDescription(eventDescription?) {
+    if (undefined === eventDescription && this.isInfo()) {
+      console.log(`  NO VALID ACTION FOUND for ${eventName}`);
+    }
   }
 
   areGuardsPassed(evDescription, eventName, eventArgs) {
@@ -152,7 +180,7 @@ export class StateMachine implements IStateMachine {
       : [evDescription.guards];
 
     for (let guard of guards) {
-      if (!guard.call(this.obj, this, eventName, eventArgs)) {
+      if (!guard.call(this.contextObject, this, eventName, eventArgs)) {
         res = false;
         break;
       }
@@ -167,7 +195,7 @@ export class StateMachine implements IStateMachine {
    * If the event doesn't require a state transition, then only guards and actions are
    * executed, otherwise, state exit actions and new state entry actions will be executed
    */
-  processEvent(eventName, eventArgs) {
+  processEvent(eventName, eventArgs?: any) {
     ///////////////////////////////////////
     // if I will change state            //
     //   call exit actions               //
@@ -177,27 +205,12 @@ export class StateMachine implements IStateMachine {
     //   call entry actions on new state //
     ///////////////////////////////////////
 
-    if (this.isInfo()) {
-      console.log(`${this.name}: Current state: ${String(this.state)}. `);
-      if (this.isDebug())
-        console.log(`   Processing event ${eventName}(${inspect(eventArgs)})`);
-    }
-
-    if (!(eventName in this.stateMap[this.state].transitions)) {
-      this.msgNotExistMode(eventName, this.name);
-      return;
-    }
+    this.logProcessEventStart(eventName, eventArgs);
 
     let eventDescription = this.getEventDescription(eventName, eventArgs);
 
-    if (undefined === eventDescription) {
-      if (this.isInfo())
-        console.log(`  NO VALID ACTION FOUND for ${eventName}`);
-      return;
-    }
-
     let actions = eventDescription["actions"];
-    let newState = eventDescription["state"];
+    let newState = eventDescription["toState"];
 
     if (newState) {
       if (!(newState in this.stateMap)) {
@@ -214,6 +227,8 @@ export class StateMachine implements IStateMachine {
     if (actions)
       this.performActions(actions, "transition", eventName, eventArgs);
 
+    this.sendMessage(eventName, eventArgs);
+
     //Setting new state
     if (newState) {
       let entryActions = this.stateMap[newState].entry;
@@ -226,6 +241,22 @@ export class StateMachine implements IStateMachine {
       if (entryActions)
         this.performActions(entryActions, "entry", eventName, eventArgs);
     }
+  }
+
+  canTransition(): boolean {}
+
+  logProcessEventStart(eventName, eventArgs) {
+    if (this.isInfo()) {
+      console.log(`${this.name}: Current state: ${String(this.state)}. `);
+      if (this.isDebug())
+        console.log(`   Processing event ${eventName}(${inspect(eventArgs)})`);
+    }
+  }
+
+  sendMessage(eventName, eventArgs) {
+    if (!this.messageBus) return;
+
+    this.messageBus.deliver([eventName, eventArgs], this);
   }
 
   performActions(actions, context, eventName, eventArgs) {
@@ -245,7 +276,7 @@ export class StateMachine implements IStateMachine {
         this.error = true;
         throw new err.actionTypeInvalid(typeof action);
       }
-      action.call(this.obj, this, eventName, eventArgs);
+      action.call(this.contextObject, this, eventName, eventArgs);
     }
   }
 
@@ -253,7 +284,7 @@ export class StateMachine implements IStateMachine {
     let res = new Set();
 
     for (let state in this.stateMap) {
-      for (let event in this.stateMap[state].transitions) {
+      for (let event in this.stateMap[state].events) {
         res.add(event);
       }
     }
@@ -296,9 +327,9 @@ export class StateMachine implements IStateMachine {
     for (let state in stateMap) {
       if (stateMap[state].initial) initialState.push(state);
 
-      //transitions must be at least an empty object
-      if (!stateMap[state].hasOwnProperty("transitions")) {
-        stateMap[state].transitions = {};
+      //events must be at least an empty object
+      if (!stateMap[state].hasOwnProperty("events")) {
+        stateMap[state].events = {};
       }
     }
 
@@ -313,11 +344,15 @@ export class StateMachine implements IStateMachine {
       throw new err.multipleInitialStates(inspect(initialState));
   }
 
-  getInitialState() {
-    for (let state in this.stateMap) {
+  getInitialState(stateMap) {
+    for (let state in stateMap) {
       if (this.stateMap[state].initial) return state;
     }
   }
+}
+
+function asArray<T = any>(candidate: T | Array<T>): Array<T> {
+  return Array.isArray(candidate) ? candidate : [candidate];
 }
 
 module.exports = {
@@ -373,7 +408,7 @@ module.exports = {
   {
      powerOff: {
         root: true,
-        transitions: {
+        events: {
             powerOn: {
                 state: "powerOn",
                 actions: ...
@@ -383,7 +418,7 @@ module.exports = {
 
      powerOn: {
          region: true,
-         transitions: {
+         events: {
              powerOff: {
                  state: "powerOff",
                  actions: ...
@@ -406,7 +441,7 @@ module.exports = {
          concurrent: true,
          parent: "powerOn",
          initial: true,
-         transitions: {
+         events: {
              switchToLumen: {
                  state: "lumen"
              }
@@ -426,7 +461,7 @@ module.exports = {
 
      musicPlaying: {
          parent: "music",
-         transitions: {
+         events: {
              stopMusic: {
                  state: "musicOff",
              }
@@ -436,7 +471,7 @@ module.exports = {
      musicOff: {
          parent: "music",
          initial: true,
-         transitions: {
+         events: {
              playMusic: {
                  state: "musicPlaying",
              }
@@ -446,7 +481,7 @@ module.exports = {
      rotationOff: {
          parent: "rotation",
          initial: true,
-         transitions: {
+         events: {
              rotateLeft: {
                  state: "rotationLeft"
              },
@@ -459,7 +494,7 @@ module.exports = {
      rotationLeft: {
 
          parent: "rotation",
-         transitions: {
+         events: {
              stopRotation: {
                  state: "rotationOff"
              },
@@ -471,7 +506,7 @@ module.exports = {
 
      rotationRight: {
          parent: "rotation",
-         transitions: {
+         events: {
              rotateLeft: {
                  state: "rotationLeft"
              },

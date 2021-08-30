@@ -26,7 +26,7 @@
 export default function createDerivedErrorClasses<T = any>(
   base: any,
   targets: { [key: string]: string }
-) {
+): any {
   let result = {};
   for (let short of Object.getOwnPropertyNames(targets)) {
     const long = targets[short];

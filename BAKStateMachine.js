@@ -46,7 +46,7 @@
   {
      powerOff: {
         root: true,
-        transitions: {
+        events: {
             powerOn: {
                 state: "powerOn",
                 actions: ...
@@ -56,7 +56,7 @@
 
      powerOn: {
          region: true,
-         transitions: {
+         events: {
              powerOff: {
                  state: "powerOff",
                  actions: ...
@@ -79,7 +79,7 @@
          concurrent: true,
          parent: "powerOn",
          initial: true,
-         transitions: {
+         events: {
              switchToLumen: {
                  state: "lumen"
              }
@@ -99,7 +99,7 @@
 
      musicPlaying: {
          parent: "music",
-         transitions: {
+         events: {
              stopMusic: {
                  state: "musicOff",
              }
@@ -109,7 +109,7 @@
      musicOff: {
          parent: "music",
          initial: true,
-         transitions: {
+         events: {
              playMusic: {
                  state: "musicPlaying",
              }
@@ -119,7 +119,7 @@
      rotationOff: {
          parent: "rotation",
          initial: true,
-         transitions: {
+         events: {
              rotateLeft: {
                  state: "rotationLeft"
              },
@@ -132,7 +132,7 @@
      rotationLeft: {
 
          parent: "rotation",
-         transitions: {
+         events: {
              stopRotation: {
                  state: "rotationOff"
              },
@@ -144,7 +144,7 @@
 
      rotationRight: {
          parent: "rotation",
-         transitions: {
+         events: {
              rotateLeft: {
                  state: "rotationLeft"
              },
@@ -183,7 +183,7 @@ const err = createDerivedErrorClasses(StateMachineError, {
 /**
  *
  * Actions
- *   array of lambdas passed to the transitions
+ *   array of lambdas passed to the events
  *   Each will be called with
  *     StateMachine, EventName, EventArgs
  */
@@ -274,7 +274,7 @@ class StateMachine {
   }
 
   getEventDescription(eventName, eventArgs) {
-    let descriptions = this.stateMap[this.state].transitions[eventName];
+    let descriptions = this.stateMap[this.state].events[eventName];
 
     if (!Array.isArray(descriptions)) {
       descriptions = [descriptions];
@@ -336,7 +336,7 @@ class StateMachine {
         console.log(`   Processing event ${eventName}(${inspect(eventArgs)})`);
     }
 
-    if (!(eventName in this.stateMap[this.state].transitions)) {
+    if (!(eventName in this.stateMap[this.state].events)) {
       this.msgNotExistMode(eventName, this.name);
       return;
     }
@@ -406,7 +406,7 @@ class StateMachine {
     let res = new Set();
 
     for (let state in this.stateMap) {
-      for (let event in this.stateMap[state].transitions) {
+      for (let event in this.stateMap[state].events) {
         res.add(event);
       }
     }
@@ -449,9 +449,9 @@ class StateMachine {
     for (let state in stateMap) {
       if (stateMap[state].initial) initialState.push(state);
 
-      //transitions must be at least an empty object
-      if (!stateMap[state].hasOwnProperty("transitions")) {
-        stateMap[state].transitions = {};
+      //events must be at least an empty object
+      if (!stateMap[state].hasOwnProperty("events")) {
+        stateMap[state].events = {};
       }
     }
 

@@ -6,7 +6,11 @@ describe("Basic handle tests", () => {
   const action = jest.fn();
   const exitEntry = jest.fn();
   const fakeBus = {
-    deliver: jest.fn().mockImplementation((message, obj) => null),
+    deliver: jest.fn().mockImplementation((message, obj) => {
+      const [messageName, payload] = message;
+      console.log(`Deliver called with ${messageName}`);
+      console.dir(payload);
+    }),
     subscribe: jest.fn().mockImplementation((SM) => null),
   };
 
@@ -51,14 +55,15 @@ describe("Basic handle tests", () => {
   describe("When handle with existing event called", () => {
     beforeAll(() => {
       return new Promise((resolve, reject) => {
-        sm.handle.startDone();
-        setTimeout(resolve, 1000);
+        sm.handle.startDone(fakePayload);
+        setTimeout(resolve, 100);
       });
     });
 
     it("Should transition to middle state", () => {
       expect(sm.state).toBe("middle");
-      expect(fakeBus.deliver).toHaveBeenCalledWith(["to-middle", fakePayload]);
+
+      expect(fakeBus.deliver).toHaveBeenCalledTimes(1);
       expect(middleEntry).toHaveBeenCalledTimes(1);
     });
   });

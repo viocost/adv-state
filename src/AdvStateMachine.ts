@@ -2,6 +2,7 @@ import {
   SMState,
   IStateMachine,
   StateMachineConfig,
+  SMLogger,
   StateMap,
   SMEvent,
   SMAction,
@@ -10,6 +11,7 @@ import {
   SMTraceLevel,
   SMMessageBus,
   EventDescription,
+  SMEvents,
 } from "./types";
 import createDerivedErrorClasses from "./DynamicError";
 import { inspect } from "util";
@@ -22,6 +24,12 @@ class StateMachineError extends Error {
     this.name = "StateMachineError";
   }
 }
+
+const ActionType = {
+  Entry: "Entry",
+  Exit: "Exit",
+  Transition: "Transition",
+};
 
 const err = createDerivedErrorClasses<StateMachineError>(StateMachineError, {
   msgNotExist: "MessageNotExist",
@@ -52,6 +60,7 @@ export class StateMachine implements IStateMachine {
     throw new err.msgNotExist(`${smName}, ${prop}`);
   }
 
+  logger: SMLogger;
   private traceLevel = SMTraceLevel.None;
   name: string = STATE_MACHINE_DEFAULT_NAME;
   contextObject: Object;
@@ -64,7 +73,7 @@ export class StateMachine implements IStateMachine {
 
   handle = new Proxy(this, {
     get(target: StateMachine, prop: string): Function {
-      console.log(`Received event ${prop}`);
+      target.logger.log(`Received event ${prop}`);
       if (target.error) throw new err.blown(target.error);
       if (target.legalEvents.has(prop))
         return (payload?: any) => {
@@ -74,7 +83,7 @@ export class StateMachine implements IStateMachine {
               target.processEvent(prop, payload);
             } catch (err) {
               target.error = err;
-              console.warn(
+              target.logger.warn(
                 `${target.name}: Event handler "${String(
                   prop
                 )}" thrown an exception: ${err}`
@@ -84,7 +93,7 @@ export class StateMachine implements IStateMachine {
           });
         };
 
-      throw new err.illegalEventName(`${String(prop)}`);
+      target.logger.log(`Illegal event received: ${String(prop)}`);
     },
   }) as any;
 
@@ -92,12 +101,14 @@ export class StateMachine implements IStateMachine {
     name,
     stateMap,
     messageBus = null,
+    logger = console,
     contextObject = null,
     msgNotExistMode = StateMachine.Discard,
     traceLevel = SMTraceLevel.Info,
   }: StateMachineConfig) {
-    this.validateStateMap(stateMap);
+    this.logger = logger;
 
+    this.validateStateMap(stateMap);
     this.contextObject = contextObject;
 
     if (messageBus) {
@@ -123,14 +134,14 @@ export class StateMachine implements IStateMachine {
     const initialState = this.getInitialState(this.stateMap);
     this.setNewState(initialState);
     this.performActions(
-      this.actionsAsArray(this.stateMap[initialState].entry),
-      "Initial entry",
+      actionsAsArray(this.stateMap[initialState].entry),
       "Initial entry",
       undefined
     );
   }
 
   update(message: SMMessageBusMessage) {
+    this.logger.log("UPDATE called");
     const [messageName, payload] = message;
     this.handle[messageName](payload);
   }
@@ -161,27 +172,20 @@ export class StateMachine implements IStateMachine {
 
   logEventDescription(eventName: SMEvent, eventDescription?: EventDescription) {
     if (undefined === eventDescription && this.isInfo()) {
-      console.log(`  NO VALID ACTION FOUND for ${String(eventName)}`);
+      this.logger.log(`  NO VALID ACTION FOUND for ${String(eventName)}`);
     }
   }
 
-  areGuardsPassed(evDescription, eventName, eventArgs) {
-    let res = true;
-    if (undefined === evDescription.guards) return res;
-
-    let guards = Array.isArray(evDescription.guards)
-      ? evDescription.guards
-      : [evDescription.guards];
-
-    for (let guard of guards) {
-      if (!guard.call(this.contextObject, this, eventName, eventArgs)) {
-        res = false;
-        break;
-      }
-    }
-
-    if (this.isDebug()) console.log(`   Guards evaluated to ${res} `);
-    return res;
+  areGuardsPassed(
+    evDescription: EventDescription,
+    eventName: SMEvent,
+    eventArgs: any
+  ) {
+    return actionsAsArray(evDescription.guards).reduce(
+      (res, guard) =>
+        guard.call(this.contextObject, this, eventName, eventArgs) && res,
+      true
+    );
   }
 
   /**
@@ -205,23 +209,38 @@ export class StateMachine implements IStateMachine {
 
     this.performExitActionsOnTransition(eventName, newState, eventArgs);
 
-    this.performActions(
-      this.actionsAsArray(actions),
-      "transition",
+    this.performOnTransitionActions(
+      actionsAsArray(actions),
       eventName,
       eventArgs
     );
-
-    this.sendMessage(eventName, eventArgs);
+    this.sendMessageOnEvent(eventDescription.message, eventArgs);
 
     this.setNewState(newState);
+    this.performEntryActions(eventName, newState, eventArgs);
+  }
 
-    this.performActions(
-      this.actionsAsArray(this.stateMap[newState].entry),
-      "entry",
-      eventName,
-      eventArgs
-    );
+  private performOnTransitionActions(
+    actions: Array<SMAction>,
+    eventName: SMEvent,
+    eventArgs: any
+  ) {
+    if (actions.length === 0) return;
+
+    this.logPerformingActions(ActionType.Transition, this.state, eventName);
+    this.performActions(actionsAsArray(actions), eventName, eventArgs);
+  }
+
+  private performEntryActions(
+    eventName: SMEvent,
+    newState: SMState,
+    eventArgs: any
+  ) {
+    const entryActions = actionsAsArray(this.stateMap[newState].entry);
+    if (entryActions.length === 0) return;
+
+    this.logPerformingActions(ActionType.Entry, this.state, eventName);
+    this.performActions(entryActions, eventName, eventArgs);
   }
 
   private setNewState(newState: SMState) {
@@ -231,33 +250,28 @@ export class StateMachine implements IStateMachine {
 
   private logStateTransition(newState) {
     if (this.isInfo())
-      console.log(
+      this.logger.log(
         `%c ${this.name}: State is now set to ${String(this.state)}`,
         "color: #3502ff; font-size: 10px; font-weight: 600; "
       );
   }
 
-  performExitActionsOnTransition(
+  private performExitActionsOnTransition(
     eventName: SMEvent,
     newState?: SMState,
     eventArgs?: any
   ) {
-    if (!newState) {
+    const exitActions = actionsAsArray(this.stateMap[this.state].exit);
+
+    if (!newState || exitActions.length === 0) {
       return;
     }
 
+    this.logPerformingActions(ActionType.Exit, this.state, eventName);
+
     this.ensureLegalState(newState as SMState);
 
-    this.performActions(
-      this.actionsAsArray(this.stateMap[this.state].exit),
-      "exit",
-      eventName,
-      eventArgs
-    );
-  }
-
-  actionsAsArray(actions?: SMAction | Array<SMAction>) {
-    return actions ? asArray<SMAction>(actions) : [];
+    this.performActions(exitActions, eventName, eventArgs);
   }
 
   ensureLegalState(state: SMState) {
@@ -269,41 +283,45 @@ export class StateMachine implements IStateMachine {
 
   logProcessEventStart(eventName: SMEvent, eventArgs?: any) {
     if (this.isInfo()) {
-      console.log(`${this.name}: Current state: ${String(this.state)}. `);
+      this.logger.log(`${this.name}: Current state: ${String(this.state)}. `);
       if (this.isDebug())
-        console.log(`   Processing event ${eventName}(${inspect(eventArgs)})`);
+        this.logger.log(
+          `   Processing event ${eventName}(${inspect(eventArgs)})`
+        );
     }
   }
 
-  sendMessage(eventName: SMEvent, eventArgs: any) {
-    if (!this.messageBus) return;
-
-    this.messageBus.deliver([eventName, eventArgs], this);
+  sendMessageOnEvent(message: SMMessageName, eventArgs: any) {
+    this.logger.log(`Sending message: ${message}`);
+    console.dir(eventArgs);
+    if (!this.messageBus || !message) return;
+    this.messageBus.deliver([message, eventArgs], this);
   }
 
   performActions(
     actions: Array<SMAction>,
-    context: string,
     eventName: SMEvent,
     eventArgs?: any
   ) {
-    if (this.isDebug()) {
-      console.log(
-        `%c ${this.name}: Calling actions for ${context} || Event name: ${eventName} `,
-        "color: #c45f01; font-size: 13px; font-weight: 600; "
-      );
-    }
-
-    if (!Array.isArray(actions)) {
-      actions = [actions];
-    }
-
     for (let action of actions) {
       if (typeof action !== "function") {
         this.error = true;
         throw new err.actionTypeInvalid(typeof action);
       }
       action.call(this.contextObject, this, eventName, eventArgs);
+    }
+  }
+
+  private logPerformingActions(
+    context: string,
+    state: SMState,
+    eventName: SMEvent
+  ) {
+    if (this.isDebug()) {
+      this.logger.log(
+        `%c ${this.name}: Calling ${context} actions for state ${state}  || Event name: ${eventName} `,
+        "color: #c45f01; font-size: 13px; font-weight: 600; "
+      );
     }
   }
 
@@ -316,7 +334,9 @@ export class StateMachine implements IStateMachine {
       }
     }
     if (this.isInfo())
-      console.log(`${this.name} recognizes events ${inspect(Array.from(res))}`);
+      this.logger.log(
+        `${this.name} recognizes events ${inspect(Array.from(res))}`
+      );
     return res;
   }
 
@@ -376,6 +396,10 @@ export class StateMachine implements IStateMachine {
       if (this.stateMap[state].initial) return state;
     }
   }
+}
+
+function actionsAsArray(actions?: SMAction | Array<SMAction>): Array<SMAction> {
+  return actions ? asArray<SMAction>(actions) : [];
 }
 
 function asArray<T = any>(candidate: T | Array<T>): Array<T> {

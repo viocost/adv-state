@@ -71,6 +71,12 @@ export type StateMachineConfig = {
   stateMap: StateMap;
 
   /**
+   * Any logger implementations that conforms to the SMLogger interface
+   * Default set to console
+   */
+  logger?: SMLogger;
+
+  /**
    * Human readable name for the state machine
    */
   name?: string;
@@ -79,7 +85,6 @@ export type StateMachineConfig = {
    * Optional message bus
    * If specified, state machine will subscribe to all the messages,
    * so external agents will be able to trigger state transitions
-   *
    */
   messageBus?: SMMessageBus;
 
@@ -139,4 +144,10 @@ export enum SMMessageNotExistMode {
   Discard,
   Info,
   Die,
+}
+
+export interface SMLogger {
+  log: (message: string, ...rest: any) => void;
+  warn: (message: string, ...rest: any) => void;
+  error: (message: string, ...rest: any) => void;
 }

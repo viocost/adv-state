@@ -47,9 +47,19 @@ export type StateDescription = {
   entry?: SMAction | Array<SMAction>;
 
   /**
+   * A message to push over message bus when entering the state
+   * */
+  entryMessage?: SMMessageName;
+
+  /**
    * Set of exit actions
    */
   exit?: SMAction | Array<SMAction>;
+
+  /**
+   * A message to push over message bus when exiting the state
+   * */
+  exitMessage?: SMMessageName;
 
   /**
    * Set of transitions: see SMEvents

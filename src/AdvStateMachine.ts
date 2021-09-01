@@ -12,9 +12,11 @@ import {
   SMMessageBus,
   EventDescription,
   SMEvents,
+  CrashActionDescriptor,
 } from "./types";
 import createDerivedErrorClasses from "./DynamicError";
 import { inspect } from "util";
+import { log } from "console";
 
 export const STATE_MACHINE_DEFAULT_NAME = "State machine";
 
@@ -29,6 +31,11 @@ const ActionType = {
   Entry: "Entry",
   Exit: "Exit",
   Transition: "Transition",
+};
+
+const MessageType = {
+  Entry: "entryMessage",
+  Exit: "exitMessage",
 };
 
 const err = createDerivedErrorClasses<StateMachineError>(StateMachineError, {
@@ -70,6 +77,7 @@ export class StateMachine implements IStateMachine {
   msgNotExistMode: Function;
   state: SMState;
   messageBus: SMMessageBus;
+  onCrash?: CrashActionDescriptor;
 
   handle = new Proxy(this, {
     get(target: StateMachine, prop: string): Function {
@@ -82,18 +90,28 @@ export class StateMachine implements IStateMachine {
             try {
               target.processEvent(prop, payload);
             } catch (err) {
-              target.error = err;
               target.logger.warn(
                 `${target.name}: Event handler "${String(
                   prop
                 )}" thrown an exception: ${err}`
               );
+              const onCrash = target.getOnCrashAction();
+              console.dir(onCrash);
+              if (onCrash) {
+                console.log("SENDING GLOBAL ERROR MESSAGE");
+                target.sendMessageOnEvent(
+                  onCrash.message as SMMessageName,
+                  err
+                );
+              }
+
               if (target.isDebug()) throw err;
             }
           });
         };
 
       target.logger.log(`Illegal event received: ${String(prop)}`);
+      return () => {};
     },
   }) as any;
 
@@ -103,11 +121,13 @@ export class StateMachine implements IStateMachine {
     messageBus = null,
     logger = console,
     contextObject = null,
+    onCrash = null,
     msgNotExistMode = StateMachine.Discard,
     traceLevel = SMTraceLevel.Info,
   }: StateMachineConfig) {
     this.logger = logger;
 
+    this.onCrash = onCrash;
     this.validateStateMap(stateMap);
     this.contextObject = contextObject;
 
@@ -144,6 +164,10 @@ export class StateMachine implements IStateMachine {
     this.logger.log("UPDATE called");
     const [messageName, payload] = message;
     this.handle[messageName](payload);
+  }
+
+  getOnCrashAction() {
+    return this.onCrash;
   }
 
   getEventDescription(eventName: SMEvent, eventArgs?: any) {
@@ -207,6 +231,7 @@ export class StateMachine implements IStateMachine {
   ) {
     const { actions, toState: newState } = eventDescription;
 
+    this.sendStateMessage(this.state, MessageType.Exit, eventArgs);
     this.performExitActionsOnTransition(eventName, newState, eventArgs);
 
     this.performOnTransitionActions(
@@ -217,6 +242,7 @@ export class StateMachine implements IStateMachine {
     this.sendMessageOnEvent(eventDescription.message, eventArgs);
 
     this.setNewState(newState);
+    this.sendStateMessage(this.state, MessageType.Entry, eventArgs);
     this.performEntryActions(eventName, newState, eventArgs);
   }
 
@@ -291,10 +317,17 @@ export class StateMachine implements IStateMachine {
     }
   }
 
+  sendStateMessage(state: SMState, messageType: string, args: any) {
+    const message = this.stateMap[state][messageType];
+    if (message) {
+      this.sendMessageOnEvent(message, args);
+    }
+  }
+
   sendMessageOnEvent(message: SMMessageName, eventArgs: any) {
-    this.logger.log(`Sending message: ${message}`);
-    console.dir(eventArgs);
     if (!this.messageBus || !message) return;
+
+    this.logger.log(`Sending message: ${message}`);
     this.messageBus.deliver([message, eventArgs], this);
   }
 

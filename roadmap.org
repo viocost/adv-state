@@ -1,14 +1,29 @@
-* Roadmap [1/9]
+* Roadmap [6/12]
+** TODO Implement defensive handling i.e. machine never blows up
+*** TODO Add configuration option for errror handler
+*** TODO Add globalErrorMessage configuration to send a message on failure in any of user defined functions
 ** TODO Migrate to typescript
-** TODO Add code structure
+*** TODO Fix all implicit any types
+** TODO Add unit tests
+*** TODO add unit tests for entry-exit
+*** TODO add tests for global error
+*** TODO add tests for guards
+** TODO Add documentation
+
+** TODO Emit xstate visualization
+*** TODO Implement visitor
+
+** TODO Implement hierarchical state (low priority)
+** DONE Add code structure
+CLOSED: [2021-09-01 Wed 00:45]
 ** DONE Implement context
 CLOSED: [2021-08-29 Sun 13:22]
 There shouldn't be any context, that is what argumetns used for.
-
-** TODO Integrate message bus
-** TODO Implement hierarchical state (low priority)
-** TODO Implement defensive handling i.e. machine never blows up
-** TODO Implement auto message sending interface
-** TODO Emit xstate visualization
-*** TODO Implement visitor
-** TODO Decouple from obs-bus
+** DONE Add logger interface
+CLOSED: [2021-08-31 Tue 22:49]
+** DONE Integrate message bus
+CLOSED: [2021-08-31 Tue 22:49]
+** DONE Implement auto message sending interface
+CLOSED: [2021-08-31 Tue 22:50]
+** DONE Decouple from obs-bus
+CLOSED: [2021-08-31 Tue 22:49]

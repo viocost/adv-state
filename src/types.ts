@@ -9,15 +9,15 @@ export type SMState = string | number;
 export type SMContext = {};
 
 export type SMAction<TData = any, TReturn = any> = (
+  stateMachine: IStateMachine,
   event: SMEvent,
-  data: TData,
-  stateMachine: IStateMachine
+  data: TData
 ) => TReturn;
 
 export type SMGuard<TData = any> = (
+  stateMachine: IStateMachine,
   event: SMEvent,
-  data: TData,
-  stateMachine: IStateMachine
+  data: TData
 ) => boolean;
 
 export type EventDescription = {

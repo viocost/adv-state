@@ -4,7 +4,20 @@ export type SMErrorHandler = (error: Error) => any;
 
 export type SMEvent = string | number;
 
-export type SMState = string | number;
+export type SMStateName = string | number;
+
+export interface SMState {
+  name: SMStateName;
+
+  withdraw(): void;
+  resume(): void;
+  performTransition(
+    childStateName: SMStateName,
+    newStateName: SMStateName
+  ): void;
+
+  processEvent(event: SMEvent, payload: any): void;
+}
 
 export type SMContext = {};
 
@@ -65,13 +78,18 @@ export type StateDescription = {
    * Set of transitions: see SMEvents
    */
   events?: SMEvents;
+
+  /**
+   * set of substates
+   * */
+  states?: StateMap;
 };
 
 /**
  * Main state configuration for the state machine. See StateDescription
  */
 export type StateMap = {
-  [key: SMState]: StateDescription;
+  [key: SMStateName]: StateDescription;
 };
 
 export type StateMachineConfig = {

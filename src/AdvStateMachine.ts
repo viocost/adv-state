@@ -1,5 +1,5 @@
 import {
-  SMState,
+  SMStateName,
   IStateMachine,
   StateMachineConfig,
   SMLogger,
@@ -75,7 +75,7 @@ export class StateMachine implements IStateMachine {
   legalEvents: any;
   stateMap: StateMap;
   msgNotExistMode: Function;
-  state: SMState;
+  state: SMStateName;
   messageBus: SMMessageBus;
   onCrash?: CrashActionDescriptor;
 
@@ -259,7 +259,7 @@ export class StateMachine implements IStateMachine {
 
   private performEntryActions(
     eventName: SMEvent,
-    newState: SMState,
+    newState: SMStateName,
     eventArgs: any
   ) {
     const entryActions = actionsAsArray(this.stateMap[newState].entry);
@@ -269,7 +269,7 @@ export class StateMachine implements IStateMachine {
     this.performActions(entryActions, eventName, eventArgs);
   }
 
-  private setNewState(newState: SMState) {
+  private setNewState(newState: SMStateName) {
     this.state = newState;
     this.logStateTransition(newState);
   }
@@ -284,7 +284,7 @@ export class StateMachine implements IStateMachine {
 
   private performExitActionsOnTransition(
     eventName: SMEvent,
-    newState?: SMState,
+    newState?: SMStateName,
     eventArgs?: any
   ) {
     const exitActions = actionsAsArray(this.stateMap[this.state].exit);
@@ -295,12 +295,12 @@ export class StateMachine implements IStateMachine {
 
     this.logPerformingActions(ActionType.Exit, this.state, eventName);
 
-    this.ensureLegalState(newState as SMState);
+    this.ensureLegalState(newState as SMStateName);
 
     this.performActions(exitActions, eventName, eventArgs);
   }
 
-  ensureLegalState(state: SMState) {
+  ensureLegalState(state: SMStateName) {
     if (!(state in this.stateMap)) {
       this.error = true;
       throw new err.stateNotExist(state);
@@ -317,7 +317,7 @@ export class StateMachine implements IStateMachine {
     }
   }
 
-  sendStateMessage(state: SMState, messageType: string, args: any) {
+  sendStateMessage(state: SMStateName, messageType: string, args: any) {
     const message = this.stateMap[state][messageType];
     if (message) {
       this.sendMessageOnEvent(message, args);
@@ -347,7 +347,7 @@ export class StateMachine implements IStateMachine {
 
   private logPerformingActions(
     context: string,
-    state: SMState,
+    state: SMStateName,
     eventName: SMEvent
   ) {
     if (this.isDebug()) {
@@ -429,14 +429,6 @@ export class StateMachine implements IStateMachine {
       if (this.stateMap[state].initial) return state;
     }
   }
-}
-
-function actionsAsArray(actions?: SMAction | Array<SMAction>): Array<SMAction> {
-  return actions ? asArray<SMAction>(actions) : [];
-}
-
-function asArray<T = any>(candidate: T | Array<T>): Array<T> {
-  return Array.isArray(candidate) ? candidate : [candidate];
 }
 
 module.exports = {

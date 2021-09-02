@@ -17,7 +17,7 @@ class FakeMBus extends EventEmitter {
   }
 }
 
-describe("Advanced test with guard conditions", () => {
+describe("Nested handle test machine", () => {
   const bus = new FakeMBus();
   const sm = prepareTestSM(bus);
   beforeAll(() => {

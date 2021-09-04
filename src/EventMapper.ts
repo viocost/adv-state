@@ -1,20 +1,30 @@
 import { State } from "./State";
-import { SMEvent, SMVisitor } from "./types";
+import { SMEvent, StateVisitor } from "./types";
+import { DuplicateEventName } from "./StateMachineError";
 
-export class EventMapper implements SMVisitor {
+export class EventMapper implements StateVisitor {
   private eventMap: Map<SMEvent, State> = new Map();
-
-  enterStateMachine(...args: any) {}
-  exitStateMachine(...args: any) {}
-  exitState(...args: any) {}
 
   enterState(state: State) {
     for (const event of Array.from(Object.keys(state.config.events || {}))) {
+      this.validateEventName(event, state);
       this.eventMap.set(event, state);
     }
   }
 
+  exitState(...args: any) {}
+
   getMap() {
     return this.eventMap;
+  }
+
+  validateEventName(event: SMEvent, state: State) {
+    if (this.eventMap.has(event)) {
+      throw new DuplicateEventName(
+        `Event ${event}, States: ${state.name}, ${
+          this.eventMap.get(event).name
+        }`
+      );
+    }
   }
 }

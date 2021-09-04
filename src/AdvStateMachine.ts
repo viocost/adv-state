@@ -12,44 +12,12 @@ import {
   Visitable,
   SMVisitor,
 } from "./types";
-import createDerivedErrorClasses from "./DynamicError";
+
 import { inspect } from "util";
 import { State } from "./State";
 import { LoggerContainer } from "./LoggerContainer";
 import { LogFilter } from "./LogFilter";
 import { EventMapper } from "./EventMapper";
-
-export const STATE_MACHINE_DEFAULT_NAME = "State machine";
-
-class StateMachineError extends Error {
-  constructor(details) {
-    super(details);
-    this.name = "StateMachineError";
-  }
-}
-
-const ActionType = {
-  Entry: "Entry",
-  Exit: "Exit",
-  Transition: "Transition",
-};
-
-const MessageType = {
-  Entry: "entryMessage",
-  Exit: "exitMessage",
-};
-
-const err = createDerivedErrorClasses<StateMachineError>(StateMachineError, {
-  msgNotExist: "MessageNotExist",
-  noStateMap: "MissingStateMap",
-  initStateNotInMap: "InitialStateNotFoundInMap",
-  multipleInitialStates: "MultipleInitialStates",
-  stateNotExist: "StateNotExist",
-  blown: "StateMachineIsBlown",
-  illegalEventName: "IllegalEventName",
-  actionTypeInvalid: "ActionTypeInvalid",
-  cannotDetermineAction: "CannotDetermineValidAction",
-});
 
 /**
  *
@@ -64,7 +32,7 @@ export class StateMachine implements IStateMachine, Visitable {
   logger: LogProcessor;
 
   // State machine human readable name
-  name: string = STATE_MACHINE_DEFAULT_NAME;
+  name: string;
 
   // Will be passed as this to all handlers
   contextObject: Object;
@@ -96,13 +64,11 @@ export class StateMachine implements IStateMachine, Visitable {
     this.initLogger(logLevel);
     this.initMessageBus(messageBus);
     this.initStateTree(stateMap);
-    this.name = name ? name : STATE_MACHINE_DEFAULT_NAME;
     this.error = false;
+    this.name = name || "State Machine";
     this.root = this.initStateTree(stateMap);
+    this.validateStateMap(this.root);
     this.eventMap = this.mapEvents();
-
-    //this.onCrash = onCrash;
-    //this.contextObject = contextObject;
   }
 
   initLogger(logLevel: LogLevel) {
@@ -110,17 +76,7 @@ export class StateMachine implements IStateMachine, Visitable {
   }
 
   initStateTree(stateMap: StateMap) {
-    this.validateStateMap(stateMap);
     return new State(this, "root", { states: stateMap }, null);
-
-    ///////////////////////////////////////////////////////////////////
-    // new Proxy(stateMap, {                                         //
-    //   get(target, prop: string) {                                 //
-    //     if (!(prop in target)) throw new err.stateNotExist(prop); //
-    //     return target[prop];                                      //
-    //   },                                                          //
-    // });                                                           //
-    ///////////////////////////////////////////////////////////////////
   }
 
   initMessageBus(messageBus: SMMessageBus) {
@@ -131,13 +87,7 @@ export class StateMachine implements IStateMachine, Visitable {
   }
 
   run() {
-    const initialState = this.getInitialState(this.stateMap);
-    this.setNewState(initialState);
-    this.performActions(
-      actionsAsArray(this.stateMap[initialState].entry),
-      "Initial entry",
-      undefined
-    );
+    this.root.resume();
   }
 
   accept(visitor: SMVisitor) {
@@ -149,12 +99,12 @@ export class StateMachine implements IStateMachine, Visitable {
   dispatchMessage(message: SMMessageName, eventArgs: any) {
     if (!this.messageBus || !message) return;
 
-    this.logger.log(`Sending message: ${message}`);
+    this.logger.debug(`Sending message: ${message}`);
     this.messageBus.deliver([message, eventArgs], this);
   }
 
   update(message: SMMessageBusMessage) {
-    this.logger.log("UPDATE called");
+    this.logger.debug("UPDATE called");
     const [messageName, payload] = message;
     this.handle[messageName](payload);
   }
@@ -163,23 +113,11 @@ export class StateMachine implements IStateMachine, Visitable {
     return this.onCrash;
   }
 
-  performActions(
-    actions: Array<SMAction>,
-    eventName: SMEvent,
-    eventArgs?: any
-  ) {
-    for (let action of actions) {
-      if (typeof action !== "function") {
-        this.error = true;
-        throw new err.actionTypeInvalid(typeof action);
-      }
-      action.call(this.contextObject, this, eventName, eventArgs);
-    }
-  }
-
   mapEvents() {
     const eventMapper = new EventMapper();
-    this.accept(eventMapper);
+
+    this.root.accept(eventMapper);
+
     this.logger.debug(
       `${this.name} recognizes events ${inspect(
         Array.from(eventMapper.getMap().keys())

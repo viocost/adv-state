@@ -1,8 +1,8 @@
 import { StateMachine } from "./AdvStateMachine";
 import { State } from "./State";
-import { SMVisitor } from "./types";
+import { SMVisitor, StateVisitor } from "./types";
 
-export class StateMachinePrettyPrinter implements SMVisitor {
+export class StateMachinePrettyPrinter implements SMVisitor, StateVisitor {
   indentation: 0;
   constructor(private indentStep = 2) {}
 

@@ -1,4 +1,4 @@
-import createDerivedErrorClasses from "./DynamicError";
+//import createDerivedErrorClasses from "./DynamicError";
 
 abstract class StateMachineError extends Error {
   constructor(message: string) {
@@ -7,16 +7,22 @@ abstract class StateMachineError extends Error {
   }
 }
 
-const err = createDerivedErrorClasses<StateMachineError>(StateMachineError, {
-  msgNotExist: "MessageNotExist",
-  noStateMap: "MissingStateMap",
-  initStateNotInMap: "InitialStateNotFoundInMap",
-  multipleInitialStates: "MultipleInitialStates",
-  stateNotExist: "StateNotExist",
-  blown: "StateMachineIsBlown",
-  illegalEventName: "IllegalEventName",
-  actionTypeInvalid: "ActionTypeInvalid",
-  cannotDetermineAction: "CannotDetermineValidAction",
-});
+export class MessageNotExist extends StateMachineError {}
+export class DuplicateEventName extends StateMachineError {}
+export class InvalidActionType extends StateMachineError {}
+export class InvalidTransition extends StateMachineError {}
+export class InitialStateError extends StateMachineError {}
 
-export default err;
+///////////////////////////////////////////////////////////////////////////////////
+// const err = createDerivedErrorClasses<StateMachineError>(StateMachineError, { //
+//   msgNotExist: "MessageNotExist",                                             //
+//   noStateMap: "MissingStateMap",                                              //
+//   initStateNotInMap: "InitialStateNotFoundInMap",                             //
+//   multipleInitialStates: "MultipleInitialStates",                             //
+//   stateNotExist: "StateNotExist",                                             //
+//   blown: "StateMachineIsBlown",                                               //
+//   illegalEventName: "IllegalEventName",                                       //
+//   actionTypeInvalid: "ActionTypeInvalid",                                     //
+//   cannotDetermineAction: "CannotDetermineValidAction",                        //
+// });                                                                           //
+///////////////////////////////////////////////////////////////////////////////////

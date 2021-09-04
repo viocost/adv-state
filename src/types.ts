@@ -200,6 +200,11 @@ export interface SMVisitor {
   exitState: (state: State) => void;
 }
 
+export interface StateVisitor {
+  enterState: (state: State) => void;
+  exitState: (state: State) => void;
+}
+
 export interface Visitable {
-  accept: (visitor: SMVisitor) => void;
+  accept: (visitor: SMVisitor | StateVisitor) => void;
 }

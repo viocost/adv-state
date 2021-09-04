@@ -9,6 +9,7 @@ import {
   StateMap,
   Visitable,
   SMVisitor,
+  StateVisitor,
 } from "./types";
 import { actionsAsArray, asArray } from "./util";
 
@@ -43,6 +44,8 @@ export class State implements SMState, Visitable {
   substates: Map<SMStateName, State> = new Map();
   logger: any;
   parallel: boolean = false;
+  initial: boolean = false;
+  isLeafState: boolean;
 
   // Reference for initial substate
   initialSubstate?: State;
@@ -56,10 +59,12 @@ export class State implements SMState, Visitable {
     public config: StateDescription,
     public parent?: State
   ) {
+    this.initial = !!config.initial;
     this.createSubstates(config.states);
+    this.isLeafState = this.substates.size === 0;
   }
 
-  accept(visitor: SMVisitor) {
+  accept(visitor: StateVisitor | SMVisitor) {
     visitor.enterState(this);
     for (let [_, substate] of this.substates) {
       substate.accept(visitor);

@@ -1,11 +1,11 @@
 import { StateMachine } from "./AdvStateMachine";
-import { InErrorState } from "./StateMachineError";
+import { InHaltedState } from "./StateMachineError";
 
 export function createHandler(stateMachine: StateMachine) {
   return new Proxy(stateMachine, {
     get(target: StateMachine, event: string): Function {
       target.logger.debug(`Received event ${event}`);
-      if (target.error) throw new InErrorState("");
+      if (target.halted) throw new InHaltedState("");
       if (event in target.eventMap) {
         return (payload?: any) => {
           setImmediate(() => {

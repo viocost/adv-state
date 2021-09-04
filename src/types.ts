@@ -138,10 +138,7 @@ export type StateMachineConfig = {
    */
   logLevel?: LogLevel;
 
-  /**
-   * Defines behavior when non-existant in current state message recieved
-   */
-  msgNotExistMode?: Function;
+  mBusErrorMessage?: string;
 
   contextObject?: Object | null;
 };
@@ -221,4 +218,9 @@ export enum SMErrorAction {
   Ignore = "IGNORE",
   Notify = "NOTIFY",
   Shutdown = "SHUTDOWN",
+}
+
+export enum Result {
+  Finished,
+  Error,
 }

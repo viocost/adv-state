@@ -182,7 +182,11 @@ export class State implements SMState, Visitable {
     eventArgs?: any
   ) {
     for (let action of actions) {
-      action.call(null, null, eventName, eventArgs);
+      try {
+        action.call(null, null, eventName, eventArgs);
+      } catch (error) {
+        this.stateMachine.handleActionError(error, this, eventName, eventArgs);
+      }
     }
   }
 
@@ -270,14 +274,19 @@ export class State implements SMState, Visitable {
 
   getEventDescription(eventName: SMEvent, eventArgs?: any) {
     let descriptions = this.validateSingleLegalDescriptions(
-      this.getGuardsPassingEventDescriptions(eventName, eventArgs)
+      this.getGuardsPassingEventDescriptions(eventName, eventArgs),
+      eventName
     );
 
     return descriptions[0];
   }
 
-  validateSingleLegalDescriptions(descriptions: Array<EventDescription>) {
+  validateSingleLegalDescriptions(
+    descriptions: Array<EventDescription>,
+    eventName: SMEvent
+  ) {
     if (descriptions.length > 1) {
+      this.stateMachine.handleAmbiguousTransition(this, eventName);
       throw new Error("More than one transition error");
     }
 
@@ -295,101 +304,16 @@ export class State implements SMState, Visitable {
     eventName: SMEvent,
     eventArgs: any
   ) {
-    return actionsAsArray(evDescription.guards).reduce(
-      (res, guard) => guard.call(null, null, eventName, eventArgs) && res,
-      true
-    );
+    try {
+      return actionsAsArray(evDescription.guards).reduce(
+        (res, guard) => guard.call(null, null, eventName, eventArgs) && res,
+        true
+      );
+    } catch (error) {
+      this.stateMachine.handleGuardError(error, this, eventName, eventArgs);
+      return false;
+    }
   }
 
   logProcessEventStart(eventName: SMEvent, eventArgs?: any) {}
-
-  private logPerformingActions(
-    context: string,
-    state: SMStateName,
-    eventName: SMEvent
-  ) {
-    /////////////////////////////////////////////////////////////////////////////////////////////////////
-    // `%c ${this.name}: Calling ${context} actions for state ${state}  || Event name: ${eventName} `, //
-    // "color: #c45f01; font-size: 13px; font-weight: 600; "                                           //
-    /////////////////////////////////////////////////////////////////////////////////////////////////////
-  }
-  /*
-  private performExitActions(eventName, eventArgs)(
-    eventName: SMEvent,
-    newState?: SMStateName,
-    eventArgs?: any
-  ) {
-    const exitActions = actionsAsArray(this.stateMap[this.state].exit);
-
-    if (!newState || exitActions.length === 0) {
-      return;
-    }
-
-    this.logPerformingActions(ActionType.Exit, this.state, eventName);
-
-    this.ensureLegalState(newState as SMStateName);
-
-    this.performActions(exitActions, eventName, eventArgs);
-  }
-
-
-  /**
-   * This function is called whenever stateMachine.handle.someTransition() called
-   * If the event doesn't require a state transition, then only guards and actions are
-   * executed, otherwise, state exit actions and new state entry actions will be executed
-   */
-
-  /*
-  processEvent(eventName: SMEvent, eventArgs?: any) {
-    this.logProcessEventStart(eventName, eventArgs);
-
-    let eventDescription = this.getEventDescription(eventName, eventArgs);
-    this.executeEvent(eventDescription, eventName, eventArgs);
-  }
-
-  private executeEvent(
-    eventDescription: EventDescription,
-    eventName: SMEvent,
-    eventArgs?: any
-  ) {
-    const { actions, toState: newState } = eventDescription;
-
-    this.sendStateMessage(this.state, MessageType.Exit, eventArgs);
-    this.performExitActions(eventName, eventArgs)(eventName, newState, eventArgs);
-
-    this.performOnTransitionActions(
-      actionsAsArray(actions),
-      eventName,
-      eventArgs
-    );
-    this.sendMessageOnEvent(eventDescription.message, eventArgs);
-
-    this.setNewState(newState);
-    this.sendStateMessage(this.state, MessageType.Entry, eventArgs);
-    this.performEntryActions(eventName, newState, eventArgs);
-  }
-
-  private performOnTransitionActions(
-    actions: Array<SMAction>,
-    eventName: SMEvent,
-    eventArgs: any
-  ) {
-    if (actions.length === 0) return;
-
-    this.logPerformingActions(ActionType.Transition, this.state, eventName);
-    this.performActions(actionsAsArray(actions), eventName, eventArgs);
-  }
-
-  private performEntryActions(
-    eventName: SMEvent,
-    newState: SMStateName,
-    eventArgs: any
-  ) {
-    const entryActions = actionsAsArray(this.stateMap[newState].entry);
-    if (entryActions.length === 0) return;
-
-    this.logPerformingActions(ActionType.Entry, this.state, eventName);
-    this.performActions(entryActions, eventName, eventArgs);
-  }
-  */
 }

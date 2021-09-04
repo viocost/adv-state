@@ -13,6 +13,7 @@ import {
   SMVisitor,
   SMErrorAction,
   EventMap,
+  Result,
 } from "./types";
 
 import { inspect } from "util";
@@ -23,6 +24,7 @@ import { EventMapper } from "./EventMapper";
 import { StateTreeValidator } from "./StateTreeValidator";
 import { FakeBus } from "./FakeBus";
 import { createHandler } from "./StateMachineEventHandler";
+import { AmbiguousTransition, GuardError } from "./StateMachineError";
 
 /**
  *
@@ -42,8 +44,13 @@ export class StateMachine implements IStateMachine, Visitable {
   // Will be passed as this to all handlers
   contextObject: Object = null;
 
-  // global error
-  error: boolean = false;
+  halted: boolean = false;
+
+  result: Result | null = null;
+
+  mBusErrorMessage: string = "STATE_MACHINE_ERROR";
+
+  stateMachineError: string | null = null;
 
   handle: any = createHandler(this);
 
@@ -62,8 +69,8 @@ export class StateMachine implements IStateMachine, Visitable {
 
   onGuardError: SMErrorAction = SMErrorAction.Notify;
   onActionError: SMErrorAction = SMErrorAction.Notify;
-  onInconsistentTransition: SMErrorAction = SMErrorAction.Shutdown;
-  onIllegalEvent: SMErrorAction = SMErrorAction.Ignore;
+  onAmbiguousTransition: SMErrorAction = SMErrorAction.Notify;
+  onIllegalEvent: SMErrorAction = SMErrorAction.Notify;
 
   onDisabledStateEvent: SMErrorAction = SMErrorAction.Ignore;
   onMBusError: SMErrorAction = SMErrorAction.Shutdown;
@@ -74,13 +81,14 @@ export class StateMachine implements IStateMachine, Visitable {
     stateMap,
     messageBus,
     contextObject,
+    mBusErrorMessage,
     logLevel = LogLevel.WARN,
   }: StateMachineConfig) {
-    this.error = false;
     this.name = name || this.name;
     this.messageBus = messageBus || this.messageBus;
     this.contextObject = contextObject || this.contextObject;
     this.logLevel = logLevel || this.logLevel;
+    this.mBusErrorMessage = mBusErrorMessage || this.mBusErrorMessage;
 
     this.initLogger(this.logLevel);
     this.logger.debug(`Initialized logger`);
@@ -144,10 +152,68 @@ export class StateMachine implements IStateMachine, Visitable {
 
   processEvent(eventName: SMEvent, eventArgs: any) {
     this.logger.debug(`Processing event: ${String(eventName)}`);
-    this.eventMap[eventName]?.processEvent(eventName, eventArgs);
+    try {
+      this.eventMap[eventName]?.processEvent(eventName, eventArgs);
+    } catch (error) {
+      this.emergencyShutdown(error);
+    }
   }
 
-  handleEventError(error: Error) {}
+  handleActionError(
+    error: Error,
+    state: State,
+    eventName: SMEvent,
+    eventArgs: any
+  ) {
+    // if ignore return
+    if (this.onActionError === SMErrorAction.Ignore) return;
+
+    const errMessage = `Action threw Exception: ${error} in state ${state} on event ${String(
+      eventName
+    )}`;
+
+    this.logger.error(errMessage);
+    this.messageBus.deliver([this.mBusErrorMessage, errMessage], this);
+
+    if (this.onActionError === SMErrorAction.Shutdown) {
+      this.emergencyShutdown(errMessage);
+    }
+  }
+
+  handleAmbiguousTransition(error: Error, state: State, eventName: SMEvent) {
+    if (this.onAmbiguousTransition === SMErrorAction.Ignore) return;
+
+    const errMessage = `Guard condition threw Exception: ${error} in state ${state} on event ${String(
+      eventName
+    )}`;
+
+    this.logger.error(errMessage);
+    this.messageBus.deliver([this.mBusErrorMessage, errMessage], this);
+
+    if (this.onAmbiguousTransition === SMErrorAction.Shutdown) {
+      throw new AmbiguousTransition(error.message);
+    }
+  }
+  handleGuardError(
+    error: Error,
+    state: State,
+    eventName: SMEvent,
+    eventArgs: any
+  ) {
+    // if ignore return
+    if (this.onGuardError === SMErrorAction.Ignore) return;
+
+    const errMessage = `Guard condition threw Exception: ${error} in state ${state} on event ${String(
+      eventName
+    )}`;
+
+    this.logger.error(errMessage);
+    this.messageBus.deliver([this.mBusErrorMessage, errMessage], this);
+
+    if (this.onGuardError === SMErrorAction.Shutdown) {
+      throw new GuardError(error.message);
+    }
+  }
 
   validateStateTree(root: State) {
     const stateTreeValidator = new StateTreeValidator();
@@ -155,8 +221,15 @@ export class StateMachine implements IStateMachine, Visitable {
   }
 
   emergencyShutdown(error: string) {
-    //capture current state
-    // transition to error
-    //
+    this.logger.error(`===!!EMERGENCY SHUTDOWN: ${error}`);
+    this.halt(Result.Error);
+    this.stateMachineError = error;
+  }
+
+  halt(result: Result) {
+    this.halted = true;
+    this.result = result;
+
+    this.logger.info(`Machine halted`);
   }
 }

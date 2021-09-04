@@ -12,8 +12,7 @@ describe("Basic initialization", () => {
 
     sm.run();
     expect(sm).toBeDefined();
-    expect(sm.name).toBe("State machine");
-    expect(sm.state === "start");
+    expect(sm.name).toBe("State Machine");
   });
 
   it("Should initialize state machine with custom name", () => {
@@ -29,6 +28,5 @@ describe("Basic initialization", () => {
     sm.run();
     expect(sm).toBeDefined();
     expect(sm.name).toBe("FOO");
-    expect(sm.state === "start");
   });
 });

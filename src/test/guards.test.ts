@@ -87,6 +87,7 @@ function prepareTestSM(mBus) {
         exitMessage: "leaving-state-2",
       },
 
+      3: {},
       finish: {
         entry: () => console.log("Done"),
         entryMessage: "at-finish",

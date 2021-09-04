@@ -1,5 +1,5 @@
 import { StateMachine } from "../AdvStateMachine";
-import { SMMessageBusMessage, SMTraceLevel } from "../types";
+import { SMMessageBusMessage } from "../types";
 import { EventEmitter } from "events";
 
 class FakeMBus extends EventEmitter {
@@ -42,7 +42,6 @@ function prepareTestSM(bus) {
     name: "Nested handler tester",
     contextObject: null,
     messageBus: bus,
-    traceLevel: SMTraceLevel.Debug,
 
     onCrash: {
       message: "global-error",

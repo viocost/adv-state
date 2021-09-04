@@ -96,6 +96,14 @@ export type StateMap = {
   [key: SMStateName]: StateDescription;
 };
 
+export type EventMap = {
+  [key: SMEvent]: State;
+};
+
+export type Substates = {
+  [key: SMStateName]: State;
+};
+
 export type StateMachineConfig = {
   /**
    * See StateMap

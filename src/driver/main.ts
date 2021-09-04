@@ -17,11 +17,11 @@ const sm = new StateMachine({
       entry: () => console.log("I am just starting"),
       events: {
         go2: {
-          toState: "2",
+          toState: 2,
         },
 
         go3: {
-          toState: "3",
+          toState: 3,
         },
       },
     },

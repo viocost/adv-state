@@ -6,12 +6,11 @@ export function createHandler(stateMachine: StateMachine) {
     get(target: StateMachine, event: string): Function {
       target.logger.debug(`Received event ${event}`);
       if (target.error) throw new InErrorState("");
-      if (target.eventMap.has(event)) {
+      if (event in target.eventMap) {
         return (payload?: any) => {
           setImmediate(() => {
             if (target.error) return;
             try {
-              target.logger.debug(`Processing`);
               target.processEvent(event, payload);
             } catch (err) {
               target.logger.warn(

@@ -1,14 +1,14 @@
 import { State } from "./State";
-import { SMEvent, StateVisitor } from "./types";
+import { EventMap, SMEvent, StateVisitor } from "./types";
 import { DuplicateEventName } from "./StateMachineError";
 
 export class EventMapper implements StateVisitor {
-  private eventMap: Map<SMEvent, State> = new Map();
+  private eventMap: EventMap = {};
 
   enterState(state: State) {
     for (const event of Array.from(Object.keys(state.config.events || {}))) {
       this.validateEventName(event, state);
-      this.eventMap.set(event, state);
+      this.eventMap[event] = state;
     }
   }
 
@@ -19,10 +19,10 @@ export class EventMapper implements StateVisitor {
   }
 
   validateEventName(event: SMEvent, state: State) {
-    if (this.eventMap.has(event)) {
+    if (event in this.eventMap) {
       throw new DuplicateEventName(
         `Event ${String(event)}, States: ${state.name}, ${
-          this.eventMap.get(event).name
+          this.eventMap[event].name
         }`
       );
     }

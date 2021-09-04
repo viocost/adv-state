@@ -12,6 +12,7 @@ import {
   Visitable,
   SMVisitor,
   SMErrorAction,
+  EventMap,
 } from "./types";
 
 import { inspect } from "util";
@@ -47,7 +48,7 @@ export class StateMachine implements IStateMachine, Visitable {
   handle: any = createHandler(this);
 
   // Maps events to states
-  eventMap: Map<SMEvent, State>;
+  eventMap: EventMap;
 
   // Message bus
   messageBus: SMMessageBus = new FakeBus();
@@ -135,7 +136,7 @@ export class StateMachine implements IStateMachine, Visitable {
 
     this.logger.debug(
       `${this.name} recognizes events ${inspect(
-        Array.from(eventMapper.getMap().keys())
+        Array.from(Object.keys(eventMapper.getMap()))
       )}`
     );
     return eventMapper.getMap();
@@ -143,7 +144,7 @@ export class StateMachine implements IStateMachine, Visitable {
 
   processEvent(eventName: SMEvent, eventArgs: any) {
     this.logger.debug(`Processing event: ${String(eventName)}`);
-    this.eventMap.get(eventName)?.processEvent(eventName, eventArgs);
+    this.eventMap[eventName]?.processEvent(eventName, eventArgs);
   }
 
   handleEventError(error: Error) {}

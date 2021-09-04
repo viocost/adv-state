@@ -10,6 +10,7 @@ import {
   Visitable,
   SMVisitor,
   StateVisitor,
+  Substates,
 } from "./types";
 import { actionsAsArray, asArray } from "./util";
 
@@ -41,7 +42,7 @@ export class State implements SMState, Visitable {
   enabled: boolean = false;
   enabledSubstate?: State;
 
-  substates: Map<SMStateName, State> = new Map();
+  substates: Substates = {};
   logger: any;
   parallel: boolean = false;
   initial: boolean = false;
@@ -62,12 +63,12 @@ export class State implements SMState, Visitable {
     this.stateMachine.logger.debug(`Initializing state ${name}`);
     this.initial = !!config.initial;
     this.createSubstates(config.states);
-    this.isLeafState = this.substates.size === 0;
+    this.isLeafState = Object.keys(this.substates).length === 0;
   }
 
   accept(visitor: StateVisitor | SMVisitor) {
     visitor.enterState(this);
-    for (let [_, substate] of this.substates) {
+    for (let substate of Object.values(this.substates)) {
       substate.accept(visitor);
     }
     visitor.exitState(this);
@@ -80,29 +81,23 @@ export class State implements SMState, Visitable {
 
     const stateKeys = Array.from(Object.keys(states));
 
-    this.substates = new Map(
-      stateKeys.map((key) => [
-        key,
-        new State(this.stateMachine, key, states[key], this),
-      ])
+    this.substates = stateKeys.reduce(
+      (acc, key) => ({
+        ...acc,
+        [key]: new State(this.stateMachine, key, states[key], this),
+      }),
+      {} as Substates
     );
 
     this.initialSubstate = stateKeys.reduce(
       (acc, stateId) =>
-        states[stateId].initial ? (this.substates.get(stateId) as State) : acc,
+        states[stateId].initial ? (this.substates[stateId] as State) : acc,
       undefined
     ) as State;
 
     this.stateMachine.logger.debug(
       `${this.name} Set initial substate to ${this.initialSubstate}`
     );
-  }
-
-  printUnderlyingMap(indent = 0) {
-    console.log(`${" ".repeat(indent)}${this.name}`);
-    for (const [_, state] of this.substates) {
-      state.printUnderlyingMap(indent + 2);
-    }
   }
 
   withdraw(eventName: SMEvent, eventArgs: any) {
@@ -161,7 +156,7 @@ export class State implements SMState, Visitable {
     this.setEnabledSubstate(undefined);
 
     // resume new state to active
-    const newState = this.substates.get(newStateName);
+    const newState = this.substates[newStateName];
     newState.resume(eventName, eventArgs);
 
     // set new state to active

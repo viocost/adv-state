@@ -34,7 +34,7 @@ export class StateTreeValidator implements StateVisitor {
   validateInitialSubstate(state: State) {
     if (state.isLeafState) return;
 
-    const initialCount = Array.from(state.substates.values()).reduce(
+    const initialCount = Array.from(Object.values(state.substates)).reduce(
       (acc, substate) => (substate.initial ? acc + 1 : acc),
       0
     );
@@ -58,7 +58,8 @@ export class StateTreeValidator implements StateVisitor {
   }
 
   validateStateTransition(state: State, toState: SMStateName) {
-    if (!state.parent.substates.has(toState)) {
+    if (!(toState in state.parent.substates)) {
+      console.log(toState);
       console.dir(state.parent.substates);
       throw new InvalidTransition(
         `${state.name} -X ${toState}: ${state.parent.name} doesn't have substate ${toState}`

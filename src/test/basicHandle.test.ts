@@ -1,5 +1,4 @@
 import { StateMachine } from "../AdvStateMachine";
-import { SMTraceLevel } from "../types";
 
 describe("Basic handle tests", () => {
   const startEntry = jest.fn();
@@ -22,7 +21,6 @@ describe("Basic handle tests", () => {
 
   const sm = new StateMachine({
     messageBus: fakeBus,
-    traceLevel: SMTraceLevel.Debug,
 
     stateMap: {
       start: {
@@ -61,8 +59,6 @@ describe("Basic handle tests", () => {
     });
 
     it("Should transition to middle state", () => {
-      expect(sm.state).toBe("middle");
-
       expect(fakeBus.deliver).toHaveBeenCalledTimes(1);
       expect(middleEntry).toHaveBeenCalledTimes(1);
     });

@@ -82,6 +82,7 @@ export class StateMachine implements IStateMachine, Visitable {
     this.logLevel = logLevel || this.logLevel;
 
     this.initLogger(this.logLevel);
+    this.logger.debug(`Initialized logger`);
     this.initMessageBus(messageBus);
     this.initStateTree(stateMap);
     this.root = this.initStateTree(stateMap);
@@ -141,7 +142,8 @@ export class StateMachine implements IStateMachine, Visitable {
   }
 
   processEvent(eventName: SMEvent, eventArgs: any) {
-    this.eventMap[eventName]?.processEvent(eventName, eventArgs);
+    this.logger.debug(`Processing event: ${String(eventName)}`);
+    this.eventMap.get(eventName)?.processEvent(eventName, eventArgs);
   }
 
   handleEventError(error: Error) {}

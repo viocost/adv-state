@@ -59,6 +59,7 @@ export class State implements SMState, Visitable {
     public config: StateDescription,
     public parent?: State
   ) {
+    this.stateMachine.logger.debug(`Initializing state ${name}`);
     this.initial = !!config.initial;
     this.createSubstates(config.states);
     this.isLeafState = this.substates.size === 0;
@@ -88,8 +89,12 @@ export class State implements SMState, Visitable {
 
     this.initialSubstate = stateKeys.reduce(
       (acc, stateId) =>
-        states[stateId].initial ? this.substates[stateId] : acc,
+        states[stateId].initial ? (this.substates.get(stateId) as State) : acc,
       undefined
+    ) as State;
+
+    this.stateMachine.logger.debug(
+      `${this.name} Set initial substate to ${this.initialSubstate}`
     );
   }
 
@@ -128,7 +133,7 @@ export class State implements SMState, Visitable {
     // or the last tha has been active,
     // or specified
     // but for now only initial
-    this.initialSubstate.resume(eventName, eventArgs);
+    this.initialSubstate?.resume(eventName, eventArgs);
 
     this.setEnabledSubstate(this.initialSubstate);
     this.setHistorySubstate(this.initialSubstate);
@@ -273,8 +278,6 @@ export class State implements SMState, Visitable {
       this.getGuardsPassingEventDescriptions(eventName, eventArgs)
     );
 
-    this.logEventDescription(eventName, descriptions[0]);
-
     return descriptions[0];
   }
 
@@ -300,12 +303,6 @@ export class State implements SMState, Visitable {
     return actionsAsArray(evDescription.guards).reduce(
       (res, guard) => guard.call(null, null, eventName, eventArgs) && res,
       true
-    );
-  }
-
-  logEventDescription(eventName: SMEvent, eventDescription?: EventDescription) {
-    this.stateMachine.logger.info(
-      `  NO VALID ACTION FOUND for ${String(eventName)}`
     );
   }
 

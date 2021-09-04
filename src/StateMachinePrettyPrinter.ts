@@ -3,7 +3,7 @@ import { State } from "./State";
 import { SMVisitor, StateVisitor } from "./types";
 
 export class StateMachinePrettyPrinter implements SMVisitor, StateVisitor {
-  indentation: 0;
+  indentation = 0;
   constructor(private indentStep = 2) {}
 
   enterStateMachine(stateMachine: StateMachine) {
@@ -15,13 +15,13 @@ export class StateMachinePrettyPrinter implements SMVisitor, StateVisitor {
   }
 
   enterState(state: State) {
-    console.log(`${this.spaces()}${state.name}`);
+    console.log(`${this.spaces()}${state.name} {`);
     this.indent();
   }
 
   exitState(state: State) {
     this.dedent();
-    console.log(`${this.spaces()}END ${state.name}`);
+    console.log(`${this.spaces()}}`);
   }
 
   indent() {

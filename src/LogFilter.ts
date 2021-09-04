@@ -25,7 +25,10 @@ export class LogFilter implements LogProcessor {
       debug: "log",
     };
     return ((message: string, ...args: any) => {
-      this.logger[levelMap[level]](message, ...args);
+      this.logger[levelMap[level]](
+        `${level.toUpperCase()}: ${message}`,
+        ...args
+      );
     }).bind(this);
   }
 }

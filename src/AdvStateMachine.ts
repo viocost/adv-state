@@ -1,8 +1,6 @@
 import {
-  SMStateName,
   IStateMachine,
   StateMachineConfig,
-  SMLogger,
   StateMap,
   SMEvent,
   SMAction,
@@ -10,16 +8,12 @@ import {
   SMMessageBusMessage,
   LogLevel,
   SMMessageBus,
-  EventDescription,
-  SMEvents,
-  CrashActionDescriptor,
   LogProcessor,
   Visitable,
   SMVisitor,
 } from "./types";
 import createDerivedErrorClasses from "./DynamicError";
 import { inspect } from "util";
-import { log } from "console";
 import { State } from "./State";
 import { LoggerContainer } from "./LoggerContainer";
 import { LogFilter } from "./LogFilter";
@@ -167,23 +161,6 @@ export class StateMachine implements IStateMachine, Visitable {
 
   getOnCrashAction() {
     return this.onCrash;
-  }
-
-  ensureLegalState(state: SMStateName) {
-    if (!(state in this.stateMap)) {
-      this.error = true;
-      throw new err.stateNotExist(state);
-    }
-  }
-
-  logProcessEventStart(eventName: SMEvent, eventArgs?: any) {
-    if (this.isInfo()) {
-      this.logger.log(`${this.name}: Current state: ${String(this.state)}. `);
-      if (this.isDebug())
-        this.logger.log(
-          `   Processing event ${eventName}(${inspect(eventArgs)})`
-        );
-    }
   }
 
   performActions(

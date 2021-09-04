@@ -19,6 +19,7 @@ import { LoggerContainer } from "./LoggerContainer";
 import { LogFilter } from "./LogFilter";
 import { EventMapper } from "./EventMapper";
 import { StateTreeValidator } from "./StateTreeValidator";
+import { FakeBus } from "./FakeBus";
 
 /**
  *
@@ -33,13 +34,13 @@ export class StateMachine implements IStateMachine, Visitable {
   logger: LogProcessor;
 
   // State machine human readable name
-  name: string;
+  name?: string = "State Machine";
 
   // Will be passed as this to all handlers
-  contextObject: Object;
+  contextObject: Object = null;
 
   // global error
-  error: boolean;
+  error: boolean = false;
 
   // Maps events to states
   eventMap: Map<SMEvent, State>;
@@ -48,7 +49,10 @@ export class StateMachine implements IStateMachine, Visitable {
   handle: Function;
 
   // Message bus
-  messageBus: SMMessageBus;
+  messageBus: SMMessageBus = new FakeBus();
+
+  // Global log level
+  logLevel: LogLevel = LogLevel.WARN;
 
   // State tree root
   root: State;
@@ -57,16 +61,20 @@ export class StateMachine implements IStateMachine, Visitable {
   constructor({
     name,
     stateMap,
-    messageBus = null,
-    contextObject = null,
+    messageBus,
+    contextObject,
     onCrash = null,
     logLevel = LogLevel.WARN,
   }: StateMachineConfig) {
-    this.initLogger(logLevel);
+    this.error = false;
+    this.name = name || this.name;
+    this.messageBus = messageBus || this.messageBus;
+    this.contextObject = contextObject || this.contextObject;
+    this.logLevel = logLevel || this.logLevel;
+
+    this.initLogger(this.logLevel);
     this.initMessageBus(messageBus);
     this.initStateTree(stateMap);
-    this.error = false;
-    this.name = name || "State Machine";
     this.root = this.initStateTree(stateMap);
     this.validateStateTree(this.root);
     this.eventMap = this.mapEvents();
@@ -121,6 +129,10 @@ export class StateMachine implements IStateMachine, Visitable {
       )}`
     );
     return eventMapper.getMap();
+  }
+
+  processEvent(eventName: SMEvent, eventArgs: any) {
+    this.eventMap[eventName]?.processEvent(eventName, eventArgs);
   }
 
   validateStateTree(root: State) {

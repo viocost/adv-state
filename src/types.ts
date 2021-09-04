@@ -5,7 +5,7 @@ export interface IStateMachine {}
 
 export type SMErrorHandler = (error: Error) => any;
 
-export type SMEvent = string | number;
+export type SMEvent = string | number | symbol;
 
 export type SMStateName = string | number;
 

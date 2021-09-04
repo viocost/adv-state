@@ -1,20 +1,21 @@
 import { StateMachine } from "./AdvStateMachine";
+import { InErrorState } from "./StateMachineError";
 
 export function createHandler(stateMachine: StateMachine) {
   return new Proxy(stateMachine, {
-    get(target: StateMachine, prop: string): Function {
-      //target.logger.log(`Received event ${prop}`);
-      if (target.error) throw new err.blown(target.error);
-      if (target.eventMap.has(prop))
+    get(target: StateMachine, event: string): Function {
+      //target.logger.log(`Received event ${event}`);
+      if (target.error) throw new InErrorState("");
+      if (target.eventMap.has(event))
         return (payload?: any) => {
           setImmediate(() => {
             if (target.error) return;
             try {
-              target.processEvent(prop, payload);
+              target.processEvent(event, payload);
             } catch (err) {
               target.logger.warn(
                 `${target.name}: Event handler "${String(
-                  prop
+                  event
                 )}" thrown an exception: ${err}`
               );
               const onCrash = target.getOnCrashAction();
@@ -32,7 +33,7 @@ export function createHandler(stateMachine: StateMachine) {
           });
         };
 
-      target.logger.log(`Illegal event received: ${String(prop)}`);
+      target.logger.log(`Illegal event received: ${String(event)}`);
       return () => {};
     },
   }) as any;

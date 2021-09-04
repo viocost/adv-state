@@ -12,6 +12,7 @@ export class DuplicateEventName extends StateMachineError {}
 export class InvalidActionType extends StateMachineError {}
 export class InvalidTransition extends StateMachineError {}
 export class InitialStateError extends StateMachineError {}
+export class InErrorState extends StateMachineError {}
 
 ///////////////////////////////////////////////////////////////////////////////////
 // const err = createDerivedErrorClasses<StateMachineError>(StateMachineError, { //

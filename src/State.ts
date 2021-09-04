@@ -187,6 +187,10 @@ export class State implements SMState, Visitable {
   }
 
   processEvent(eventName: SMEvent, eventArgs?: any) {
+    if (!this.enabled) {
+      return;
+    }
+
     this.logProcessEventStart(eventName, eventArgs);
 
     let eventDescription = this.getEventDescription(eventName, eventArgs);

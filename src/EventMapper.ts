@@ -21,7 +21,7 @@ export class EventMapper implements StateVisitor {
   validateEventName(event: SMEvent, state: State) {
     if (this.eventMap.has(event)) {
       throw new DuplicateEventName(
-        `Event ${event}, States: ${state.name}, ${
+        `Event ${String(event)}, States: ${state.name}, ${
           this.eventMap.get(event).name
         }`
       );

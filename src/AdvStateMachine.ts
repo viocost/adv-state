@@ -11,6 +11,7 @@ import {
   LogProcessor,
   Visitable,
   SMVisitor,
+  SMErrorAction,
 } from "./types";
 
 import { inspect } from "util";
@@ -20,6 +21,7 @@ import { LogFilter } from "./LogFilter";
 import { EventMapper } from "./EventMapper";
 import { StateTreeValidator } from "./StateTreeValidator";
 import { FakeBus } from "./FakeBus";
+import { createHandler } from "./StateMachineEventHandler";
 
 /**
  *
@@ -42,11 +44,10 @@ export class StateMachine implements IStateMachine, Visitable {
   // global error
   error: boolean = false;
 
+  handle: any = createHandler(this);
+
   // Maps events to states
   eventMap: Map<SMEvent, State>;
-
-  // Event handler
-  handle: Function;
 
   // Message bus
   messageBus: SMMessageBus = new FakeBus();
@@ -58,12 +59,20 @@ export class StateMachine implements IStateMachine, Visitable {
   root: State;
   //onCrash?: CrashActionDescriptor;
 
+  onGuardError: SMErrorAction = SMErrorAction.Notify;
+  onActionError: SMErrorAction = SMErrorAction.Notify;
+  onInconsistentTransition: SMErrorAction = SMErrorAction.Shutdown;
+  onIllegalEvent: SMErrorAction = SMErrorAction.Ignore;
+
+  onDisabledStateEvent: SMErrorAction = SMErrorAction.Ignore;
+  onMBusError: SMErrorAction = SMErrorAction.Shutdown;
+  onLoggerError: SMErrorAction = SMErrorAction.Shutdown;
+
   constructor({
     name,
     stateMap,
     messageBus,
     contextObject,
-    onCrash = null,
     logLevel = LogLevel.WARN,
   }: StateMachineConfig) {
     this.error = false;
@@ -135,8 +144,16 @@ export class StateMachine implements IStateMachine, Visitable {
     this.eventMap[eventName]?.processEvent(eventName, eventArgs);
   }
 
+  handleEventError(error: Error) {}
+
   validateStateTree(root: State) {
     const stateTreeValidator = new StateTreeValidator();
     root.accept(stateTreeValidator);
+  }
+
+  emergencyShutdown(error: string) {
+    //capture current state
+    // transition to error
+    //
   }
 }

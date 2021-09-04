@@ -59,6 +59,7 @@ export class StateTreeValidator implements StateVisitor {
 
   validateStateTransition(state: State, toState: SMStateName) {
     if (!state.parent.substates.has(toState)) {
+      console.dir(state.parent.substates);
       throw new InvalidTransition(
         `${state.name} -X ${toState}: ${state.parent.name} doesn't have substate ${toState}`
       );

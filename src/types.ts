@@ -208,3 +208,9 @@ export interface StateVisitor {
 export interface Visitable {
   accept: (visitor: SMVisitor | StateVisitor) => void;
 }
+
+export enum SMErrorAction {
+  Ignore = "IGNORE",
+  Notify = "NOTIFY",
+  Shutdown = "SHUTDOWN",
+}

@@ -18,22 +18,11 @@ export function createHandler(stateMachine: StateMachine) {
                   event
                 )}" thrown an exception: ${err}`
               );
-              const onCrash = target.getOnCrashAction();
-              console.dir(onCrash);
-              if (onCrash) {
-                console.log("SENDING GLOBAL ERROR MESSAGE");
-                target.sendMessageOnEvent(
-                  onCrash.message as SMMessageName,
-                  err
-                );
-              }
-
-              if (target.isDebug()) throw err;
             }
           });
         };
 
-      target.logger.log(`Illegal event received: ${String(event)}`);
+      target.logger.warn(`Illegal event received: ${String(event)}`);
       return () => {};
     },
   }) as any;

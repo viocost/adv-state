@@ -9,11 +9,12 @@ export type SMStateName = string | number;
 export interface SMState {
   name: SMStateName;
 
-  withdraw(): void;
-  resume(): void;
+  withdraw(eventName: SMEvent, eventArgs?: any): void;
+  resume(eventName: SMEvent, eventArgs?: any): void;
   performTransition(
-    childStateName: SMStateName,
-    newStateName: SMStateName
+    newStateName: SMStateName,
+    eventName: SMEvent,
+    eventArgs?: any
   ): void;
 
   processEvent(event: SMEvent, payload: any): void;
@@ -124,7 +125,7 @@ export type StateMachineConfig = {
   /**
    * Specifies verbosity of a state machine
    */
-  traceLevel?: SMTraceLevel;
+  logLevel?: LogLevel;
 
   /**
    * Defines behavior when non-existant in current state message recieved
@@ -162,12 +163,6 @@ export interface IStateMachine {
   handle: Object;
 }
 
-export enum SMTraceLevel {
-  None,
-  Info,
-  Debug,
-}
-
 export enum SMMessageNotExistMode {
   Discard,
   Info,
@@ -176,6 +171,21 @@ export enum SMMessageNotExistMode {
 
 export interface SMLogger {
   log: (message: string, ...rest: any) => void;
+  warn: (message: string, ...rest: any) => void;
+  error: (message: string, ...rest: any) => void;
+}
+
+export enum LogLevel {
+  SILENT = 0,
+  ERROR = 1,
+  WARN = 2,
+  INFO = 3,
+  DEBUG = 4,
+}
+
+export interface LogProcessor {
+  debug: (message: string, ...rest: any) => void;
+  info: (message: string, ...rest: any) => void;
   warn: (message: string, ...rest: any) => void;
   error: (message: string, ...rest: any) => void;
 }

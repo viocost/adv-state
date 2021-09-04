@@ -14,6 +14,8 @@ import {
   SMEvents,
   CrashActionDescriptor,
   LogProcessor,
+  Visitable,
+  SMVisitor,
 } from "./types";
 import createDerivedErrorClasses from "./DynamicError";
 import { inspect } from "util";
@@ -21,6 +23,7 @@ import { log } from "console";
 import { State } from "./State";
 import { LoggerContainer } from "./LoggerContainer";
 import { LogFilter } from "./LogFilter";
+import { EventMapper } from "./EventMapper";
 
 export const STATE_MACHINE_DEFAULT_NAME = "State machine";
 
@@ -62,7 +65,7 @@ const err = createDerivedErrorClasses<StateMachineError>(StateMachineError, {
  *     StateMachine, EventName, EventArgs
  */
 
-export class StateMachine implements IStateMachine {
+export class StateMachine implements IStateMachine, Visitable {
   // Logger
   logger: LogProcessor;
 
@@ -143,6 +146,12 @@ export class StateMachine implements IStateMachine {
     );
   }
 
+  accept(visitor: SMVisitor) {
+    visitor.enterStateMachine(this);
+    this.root.accept(visitor);
+    visitor.exitStateMachine(this);
+  }
+
   dispatchMessage(message: SMMessageName, eventArgs: any) {
     if (!this.messageBus || !message) return;
 
@@ -192,27 +201,14 @@ export class StateMachine implements IStateMachine {
   }
 
   mapEvents() {
-    for (let state in this.stateMap) {
-      for (let event in this.stateMap[state].events) {
-        res.add(event);
-      }
-    }
-    if (this.isInfo())
-      this.logger.log(
-        `${this.name} recognizes events ${inspect(Array.from(res))}`
-      );
-    return res;
-  }
-
-  isDebug() {
-    return this.traceLevel === SMTraceLevel.Debug;
-  }
-
-  isInfo() {
-    return (
-      this.traceLevel === SMTraceLevel.Debug ||
-      this.traceLevel === SMTraceLevel.Info
+    const eventMapper = new EventMapper();
+    this.accept(eventMapper);
+    this.logger.debug(
+      `${this.name} recognizes events ${inspect(
+        Array.from(eventMapper.getMap().keys())
+      )}`
     );
+    return eventMapper.getMap();
   }
 
   validateStateMap(stateMap) {

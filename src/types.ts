@@ -1,3 +1,6 @@
+import { StateMachine } from "./AdvStateMachine";
+import { State } from "./State";
+
 export interface IStateMachine {}
 
 export type SMErrorHandler = (error: Error) => any;
@@ -188,4 +191,15 @@ export interface LogProcessor {
   info: (message: string, ...rest: any) => void;
   warn: (message: string, ...rest: any) => void;
   error: (message: string, ...rest: any) => void;
+}
+
+export interface SMVisitor {
+  enterStateMachine: (stateMachine: StateMachine) => void;
+  exitStateMachine: (stateMachine: StateMachine) => void;
+  enterState: (state: State) => void;
+  exitState: (state: State) => void;
+}
+
+export interface Visitable {
+  accept: (visitor: SMVisitor) => void;
 }

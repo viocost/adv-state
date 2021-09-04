@@ -7,6 +7,8 @@ import {
   StateDescription,
   SMAction,
   StateMap,
+  Visitable,
+  SMVisitor,
 } from "./types";
 import { actionsAsArray, asArray } from "./util";
 
@@ -34,7 +36,7 @@ import { actionsAsArray, asArray } from "./util";
  *
  *  */
 
-export class State implements SMState {
+export class State implements SMState, Visitable {
   enabled: boolean = false;
   enabledSubstate?: State;
 
@@ -55,6 +57,14 @@ export class State implements SMState {
     public parent?: State
   ) {
     this.createSubstates(config.states);
+  }
+
+  accept(visitor: SMVisitor) {
+    visitor.enterState(this);
+    for (let [_, substate] of this.substates) {
+      substate.accept(visitor);
+    }
+    visitor.exitState(this);
   }
 
   private createSubstates(states?: StateMap) {

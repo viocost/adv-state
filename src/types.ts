@@ -133,6 +133,10 @@ export type StateMachineConfig = {
    */
   onCrash?: CrashActionDescriptor;
 
+  onGuardError?: SMErrorAction;
+  onIllegalEvent?: SMErrorAction;
+  onAmbiguousTransition?: SMErrorAction;
+  onActionError?: SMErrorAction;
   /**
    * Specifies verbosity of a state machine
    */

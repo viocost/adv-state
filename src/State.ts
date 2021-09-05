@@ -1,3 +1,4 @@
+import { log } from "console";
 import { StateMachine } from "./AdvStateMachine";
 import {
   SMStateName,
@@ -195,8 +196,10 @@ export class State implements SMState, Visitable {
     }
 
     //this.logProcessEventStart(eventName, eventArgs);
-
     let eventDescription = this.getEventDescription(eventName, eventArgs);
+
+    // Abort if no possible event handling found
+    if (!eventDescription) return;
 
     //perform exit actions if transition
     this.withdrawOnTransition(eventDescription, eventName, eventArgs);
@@ -309,6 +312,7 @@ export class State implements SMState, Visitable {
         true
       );
     } catch (error) {
+      this.stateMachine.logger.debug(`Handling guard error`);
       this.stateMachine.handleGuardError(error, this, eventName, eventArgs);
       return false;
     }

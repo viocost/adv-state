@@ -78,9 +78,13 @@ export class StateMachine implements IStateMachine, Visitable {
   constructor({
     name,
     stateMap,
+    onGuardError,
     messageBus,
+    onActionError,
     contextObject,
+    onAmbiguousTransition,
     mBusErrorMessage,
+    onIllegalEvent,
     logLevel = LogLevel.WARN,
   }: StateMachineConfig) {
     this.name = name || this.name;
@@ -88,6 +92,11 @@ export class StateMachine implements IStateMachine, Visitable {
     this.contextObject = contextObject || this.contextObject;
     this.logLevel = logLevel || this.logLevel;
     this.mBusErrorMessage = mBusErrorMessage || this.mBusErrorMessage;
+    this.onGuardError = onGuardError || this.onGuardError;
+    this.onActionError = onActionError || this.onActionError;
+    this.onAmbiguousTransition =
+      onAmbiguousTransition || this.onAmbiguousTransition;
+    this.onIllegalEvent = onIllegalEvent || this.onIllegalEvent;
 
     this.initLogger(this.logLevel);
     this.logger.debug(`Initialized logger`);
@@ -207,7 +216,9 @@ export class StateMachine implements IStateMachine, Visitable {
     eventArgs: any
   ) {
     // if ignore return
-    if (this.onGuardError === SMErrorAction.Ignore) return;
+    if (this.onGuardError === SMErrorAction.Ignore) {
+      return;
+    }
 
     const errMessage = `Guard condition threw Exception: ${error} in state ${state} on event ${String(
       eventName

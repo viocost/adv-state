@@ -1,6 +1,6 @@
 {
   "name": "adv-state",
-  "version": "2.0.3",
+  "version": "2.0.4",
   "description": "Feature rich state machine implementation",
   "main": "dist/index.js",
   "types": "dist/types.d.ts",
@@ -38,5 +38,4 @@
     "fsa",
     "finite automata"
   ]
-
 }

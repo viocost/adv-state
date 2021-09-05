@@ -220,9 +220,9 @@ export class StateMachine implements IStateMachine, Visitable {
       return;
     }
 
-    const errMessage = `Guard condition threw Exception: ${error} in state ${state} on event ${String(
-      eventName
-    )}`;
+    const errMessage = `Guard condition threw Exception: ${error} in state ${
+      state.name
+    } on event ${String(eventName)}`;
 
     this.logger.error(errMessage);
     this.messageBus.deliver([this.mBusErrorMessage, errMessage], this);

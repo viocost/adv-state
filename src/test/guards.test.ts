@@ -1,22 +1,5 @@
 import { StateMachine } from "../AdvStateMachine";
-import { SMMessageBusMessage } from "../types";
-import { EventEmitter } from "events";
-
-class FakeMBus extends EventEmitter {
-  receivedMessages = [];
-  sm: StateMachine;
-  subscribe(sm: StateMachine) {
-    console.log("Subscribe called");
-    this.sm = sm;
-  }
-
-  deliver(msg: SMMessageBusMessage, ...rest: any) {
-    console.log("DELIVER CALLED");
-    const [mName, payload] = msg;
-    this.emit(mName as string, payload);
-    this.receivedMessages.push(mName);
-  }
-}
+import { FakeMBus } from "./TestBus";
 
 describe("Advanced test with guard conditions", () => {
   const bus = new FakeMBus();

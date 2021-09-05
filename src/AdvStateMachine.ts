@@ -22,7 +22,11 @@ import { EventMapper } from "./EventMapper";
 import { StateTreeValidator } from "./StateTreeValidator";
 import { FakeBus } from "./FakeBus";
 import { createHandler } from "./StateMachineEventHandler";
-import { AmbiguousTransition, GuardError } from "./StateMachineError";
+import {
+  ActionError,
+  AmbiguousTransition,
+  GuardError,
+} from "./StateMachineError";
 import { StateGetter } from "./StateGetter";
 
 /**
@@ -49,7 +53,7 @@ export class StateMachine implements IStateMachine, Visitable {
 
   mBusErrorMessage: string = "STATE_MACHINE_ERROR";
 
-  stateMachineError: string | null = null;
+  errorneousHaltMessage: string | null = null;
 
   handle: any = createHandler(this);
 
@@ -176,15 +180,16 @@ export class StateMachine implements IStateMachine, Visitable {
     // if ignore return
     if (this.onActionError === SMErrorAction.Ignore) return;
 
-    const errMessage = `Action threw Exception: ${error} in state ${state} on event ${String(
-      eventName
-    )}`;
+    const errMessage = `Action threw Exception: ${error} in state ${
+      state.name
+    } on event ${String(eventName)}`;
 
     this.logger.error(errMessage);
     this.messageBus.deliver([this.mBusErrorMessage, errMessage], this);
 
     if (this.onActionError === SMErrorAction.Shutdown) {
       this.emergencyShutdown(errMessage);
+      throw new ActionError(errMessage);
     }
   }
 
@@ -240,7 +245,7 @@ export class StateMachine implements IStateMachine, Visitable {
   emergencyShutdown(error: string) {
     this.logger.error(`===!!EMERGENCY SHUTDOWN: ${error}`);
     this.halt(Result.Error);
-    this.stateMachineError = error;
+    this.errorneousHaltMessage = error;
   }
 
   halt(result: Result) {

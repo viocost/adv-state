@@ -1,19 +1,32 @@
-* Roadmap [6/12]
+* Roadmap [8/15]
 ** TODO Implement defensive handling i.e. machine never blows up
 *** TODO Add configuration option for errror handler
 *** TODO Add globalErrorMessage configuration to send a message on failure in any of user defined functions
-** TODO Migrate to typescript
-*** TODO Fix all implicit any types
+** DONE Migrate to typescript
+CLOSED: [2021-09-05 Sun 17:50]
+*** DONE Fix all implicit any types
+CLOSED: [2021-09-05 Sun 17:50]
 ** TODO Add unit tests
-*** TODO add unit tests for entry-exit
-*** TODO add tests for global error
-*** TODO add tests for guards
+*** DONE Guards error handling
+CLOSED: [2021-09-05 Sun 17:51]
+*** TODO Guarded transitions
+*** TODO Ambiguous transitions handling
+*** DONE basic handle events
+CLOSED: [2021-09-05 Sun 17:52]
+*** TODO Message delivery on entry, exit, transitions action
+*** TODO Error handling on entry, exit, transition action error
+** TODO Implement concurrent region
+** TODO Implement transient state
+** TODO Implement timeout transitions
+
 ** TODO Add documentation
 
 ** TODO Emit xstate visualization
-*** TODO Implement visitor
+*** DONE Implement visitor
+CLOSED: [2021-09-05 Sun 17:50]
 
-** TODO Implement hierarchical state (low priority)
+** DONE Implement hierarchical state (low priority)
+CLOSED: [2021-09-05 Sun 17:50]
 ** DONE Add code structure
 CLOSED: [2021-09-01 Wed 00:45]
 ** DONE Implement context

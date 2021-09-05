@@ -8,7 +8,7 @@ describe("Advanced test with guard conditions", () => {
   });
 
   it("Should verify the output", () => {
-    expect(sm.error).toBeFalsy();
+    expect(sm.halted).toBeFalsy();
   });
 });
 

@@ -57,7 +57,7 @@ describe("When shutdown strategy is choosen for guard errors", () => {
     expect(mBus.receivedMessages[0]).toBe("ERROR");
     expect(mBus.receivedPayloads[0]).toBeDefined();
     expect(sm.halted).toBeTruthy();
-    expect(sm.stateMachineError).toBeDefined();
+    expect(sm.errorneousHaltMessage).toBeDefined();
     expect(sm.result).toBe(Result.Error);
   });
 });

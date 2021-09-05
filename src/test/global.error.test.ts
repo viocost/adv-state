@@ -1,6 +1,8 @@
 import { StateMachine } from "../AdvStateMachine";
-import { SMMessageBusMessage } from "../types";
+import { SMErrorAction, SMMessageBusMessage } from "../types";
 import { EventEmitter } from "events";
+
+const errorMessage = "ERROR";
 
 class FakeMBus extends EventEmitter {
   receivedMessages = [];
@@ -16,157 +18,334 @@ class FakeMBus extends EventEmitter {
   }
 }
 
-describe("Advanced test with guard conditions", () => {
+describe("When ignore action specified on action exception", () => {
+  const actions = [
+    jest.fn().mockImplementation(() => {
+      throw new Error();
+    }),
+    jest.fn(),
+  ];
   const bus = new FakeMBus();
-  const sm = prepareTestSM(bus);
+  const sm = prepareTestSM(bus, SMErrorAction.Ignore, actions, []);
 
   beforeAll(() => {
     return new Promise((resolve, reject) => {
-      bus.on("to-state-2", () => sm.handle.doneTwo({ bar: "bazz" }));
-
-      bus.on("global-error", resolve);
       sm.run();
       sm.handle.doneZero({ foo: "bar" });
+      setTimeout(resolve, 100);
     });
   });
 
-  it("Should verify the output", () => {
-    console.log("Messages received");
-    expect(bus.receivedMessages[0]).toBe("global-error");
+  it("It should finish the transition without notifying error", () => {
+    expect(bus.receivedMessages[0]).toBeUndefined;
+    expect(actions[1]).toHaveBeenCalledTimes(1);
+    expect(actions[0]).toHaveBeenCalledTimes(1);
+    expect(sm.state).toBe("root.2");
+    expect(sm.halted).toBeFalsy();
+    expect(sm.errorneousHaltMessage).toBe(null);
   });
 });
 
-describe("When transition action throws error", () => {
+describe("When notify action specified on action exception", () => {
+  const actions = [
+    jest.fn().mockImplementation(() => {
+      throw new Error();
+    }),
+    jest.fn(),
+  ];
   const bus = new FakeMBus();
-  const sm = prepareTestSM(bus);
+  const sm = prepareTestSM(bus, SMErrorAction.Notify, actions, []);
 
   beforeAll(() => {
     return new Promise((resolve, reject) => {
-      bus.on("to-state-2", () => sm.handle.doneTwo({ bar: "bazz" }));
-
-      bus.on("global-error", resolve);
       sm.run();
       sm.handle.doneZero({ foo: "bar" });
+      setTimeout(resolve, 100);
     });
   });
 
-  it("It should send a message over message bus", () => {
-    console.log("Messages received");
-    expect(bus.receivedMessages[0]).toBe("global-error");
+  it("It should finish the transition and send error message over message bus", () => {
+    expect(bus.receivedMessages[0]).toBe(errorMessage);
+    expect(sm.state).toBe("root.2");
+    expect(actions[1]).toHaveBeenCalledTimes(1);
+    expect(actions[0]).toHaveBeenCalledTimes(1);
+    expect(sm.halted).toBeFalsy();
+    expect(sm.errorneousHaltMessage).toBe(null);
   });
 });
 
-describe("When entry action throws error", () => {
+describe("When shutdown action specified on action exception", () => {
+  const actions = [
+    jest.fn().mockImplementation(() => {
+      throw new Error();
+    }),
+    jest.fn(),
+  ];
   const bus = new FakeMBus();
-  const sm = prepareTestSM(bus);
+  const sm = prepareTestSM(bus, SMErrorAction.Shutdown, actions, []);
 
   beforeAll(() => {
     return new Promise((resolve, reject) => {
-      bus.on("to-state-2", () => sm.handle.doneTwo({ bar: "bazz" }));
-
-      bus.on("global-error", resolve);
       sm.run();
-      sm.handle.goThree();
+      sm.handle.doneZero({ foo: "bar" });
+      setTimeout(resolve, 100);
     });
   });
 
-  it("It should send a message over message bus", () => {
-    console.log("Messages received");
-    expect(bus.receivedMessages[0]).toBe("global-error");
+  it("Should halt state machine with error and throw the exception without calling next handler", () => {
+    expect(bus.receivedMessages[0]).toBe(errorMessage);
+    expect(sm.state).toBe("root");
+    expect(actions[0]).toHaveBeenCalledTimes(1);
+    expect(actions[1]).toHaveBeenCalledTimes(0);
+    expect(sm.halted).toBeTruthy();
+    expect(sm.errorneousHaltMessage).toBeInstanceOf(Error);
   });
 });
 
-describe("When exit action throws error", () => {
+describe("When ignore action specified on entry action exception", () => {
+  const actions = [
+    jest.fn().mockImplementation(() => {
+      throw new Error();
+    }),
+    jest.fn(),
+  ];
   const bus = new FakeMBus();
-  const sm = prepareTestSM(bus);
+  const sm = prepareTestSMEntryError(bus, SMErrorAction.Ignore, actions, []);
 
   beforeAll(() => {
     return new Promise((resolve, reject) => {
-      bus.on("to-state-2", () => sm.handle.doneTwo({ bar: "bazz" }));
-
-      bus.on("in-four", () => sm.handle.finish());
-
-      bus.on("global-error", resolve);
       sm.run();
-      sm.handle.goFour();
+      sm.handle.doneZero({ foo: "bar" });
+      setTimeout(resolve, 100);
     });
   });
 
-  it("It should send a message over message bus", () => {
-    console.log("Messages received");
-    expect(bus.receivedMessages[1]).toBe("global-error");
+  it("It should ignore error and finish the transition without notifying error", () => {
+    expect(bus.receivedMessages[0]).toBeUndefined();
+    expect(sm.state).toBe("root.2");
+    expect(actions[1]).toHaveBeenCalledTimes(1);
+    expect(actions[1]).toHaveBeenCalledTimes(1);
+    expect(sm.halted).toBeFalsy();
+    expect(sm.errorneousHaltMessage).toBe(null);
   });
 });
 
-function prepareTestSM(mBus) {
+describe("When notify action specified on entry action exception", () => {
+  const actions = [
+    jest.fn().mockImplementation(() => {
+      throw new Error();
+    }),
+    jest.fn(),
+  ];
+  const bus = new FakeMBus();
+  const sm = prepareTestSMEntryError(bus, SMErrorAction.Notify, actions, []);
+
+  beforeAll(() => {
+    return new Promise((resolve, reject) => {
+      sm.run();
+      sm.handle.doneZero({ foo: "bar" });
+      setTimeout(resolve, 100);
+    });
+  });
+
+  it("It should send error messge over message bus and finish the transition", () => {
+    expect(bus.receivedMessages[0]).toBe(errorMessage);
+    expect(sm.state).toBe("root.2");
+    expect(actions[1]).toHaveBeenCalledTimes(1);
+    expect(actions[1]).toHaveBeenCalledTimes(1);
+    expect(sm.halted).toBeFalsy();
+    expect(sm.errorneousHaltMessage).toBe(null);
+  });
+});
+
+describe("When shutdown action specified on entry action exception", () => {
+  const actions = [
+    jest.fn().mockImplementation(() => {
+      throw new Error();
+    }),
+    jest.fn(),
+  ];
+  const bus = new FakeMBus();
+  const sm = prepareTestSMEntryError(bus, SMErrorAction.Shutdown, actions, []);
+
+  beforeAll(() => {
+    return new Promise((resolve, reject) => {
+      sm.run();
+      sm.handle.doneZero({ foo: "bar" });
+      setTimeout(resolve, 100);
+    });
+  });
+
+  it("Should halt state machine and throw error without calling next action. Error note should be sent", () => {
+    expect(bus.receivedMessages[0]).toBe(errorMessage);
+    expect(sm.state).toBe("root.2");
+    expect(actions[0]).toHaveBeenCalledTimes(1);
+    expect(actions[1]).toHaveBeenCalledTimes(0);
+    expect(sm.halted).toBeTruthy();
+    expect(sm.errorneousHaltMessage).toBeInstanceOf(Error);
+  });
+});
+
+describe("When ignore action specified on exit action exception", () => {
+  const actions = [
+    jest.fn().mockImplementation(() => {
+      throw new Error();
+    }),
+    jest.fn(),
+  ];
+  const bus = new FakeMBus();
+  const sm = prepareTestSMExitError(bus, SMErrorAction.Ignore, actions);
+
+  beforeAll(() => {
+    return new Promise((resolve, reject) => {
+      sm.run();
+      sm.handle.doneZero({ foo: "bar" });
+      setTimeout(resolve, 100);
+    });
+  });
+
+  it("It should ignore error and finish the transition without sending error", () => {
+    expect(bus.receivedMessages[0]).toBeUndefined();
+    expect(sm.state).toBe("root.2");
+    expect(actions[1]).toHaveBeenCalledTimes(1);
+    expect(actions[1]).toHaveBeenCalledTimes(1);
+    expect(sm.halted).toBeFalsy();
+    expect(sm.errorneousHaltMessage).toBe(null);
+  });
+});
+
+describe("When notify action specified on entry action exception", () => {
+  const actions = [
+    jest.fn().mockImplementation(() => {
+      throw new Error();
+    }),
+    jest.fn(),
+  ];
+  const bus = new FakeMBus();
+  const sm = prepareTestSMExitError(bus, SMErrorAction.Notify, actions);
+
+  beforeAll(() => {
+    return new Promise((resolve, reject) => {
+      sm.run();
+      sm.handle.doneZero({ foo: "bar" });
+      setTimeout(resolve, 100);
+    });
+  });
+
+  it("It should send error over messge bus and finish the transition", () => {
+    expect(bus.receivedMessages[0]).toBe(errorMessage);
+    expect(sm.state).toBe("root.2");
+    expect(actions[1]).toHaveBeenCalledTimes(1);
+    expect(actions[1]).toHaveBeenCalledTimes(1);
+    expect(sm.halted).toBeFalsy();
+    expect(sm.errorneousHaltMessage).toBe(null);
+  });
+});
+
+describe("When shutdown action specified on action exception", () => {
+  const actions = [
+    jest.fn().mockImplementation(() => {
+      throw new Error();
+    }),
+    jest.fn(),
+  ];
+  const bus = new FakeMBus();
+  const sm = prepareTestSMExitError(bus, SMErrorAction.Shutdown, actions);
+
+  beforeAll(() => {
+    return new Promise((resolve, reject) => {
+      sm.run();
+      sm.handle.doneZero({ foo: "bar" });
+      setTimeout(resolve, 100);
+    });
+  });
+
+  it("It should perform emergency shutdown and throw an error without leaving the state", () => {
+    expect(bus.receivedMessages[0]).toBe(errorMessage);
+    expect(sm.state).toBe("root.0");
+    expect(actions[0]).toHaveBeenCalledTimes(1);
+    expect(actions[1]).toHaveBeenCalledTimes(0);
+    expect(sm.halted).toBeTruthy();
+    expect(sm.errorneousHaltMessage).toBeInstanceOf(Error);
+  });
+});
+
+function prepareTestSM(mBus, onActionError: SMErrorAction, actions, exit) {
   return new StateMachine({
     name: "Guard tester",
     contextObject: null,
     messageBus: mBus,
-    onCrash: {
-      message: "global-error",
-    },
+    onActionError: onActionError,
+    mBusErrorMessage: errorMessage,
 
     stateMap: {
       0: {
         initial: true,
         events: {
-          doneZero: [
-            {
-              toState: 2,
-              message: "to-state-2",
-              actions: () => {
-                throw new Error();
-              },
-            },
-          ],
-
-          goThree: {
-            toState: 3,
-          },
-
-          goFour: {
-            toState: 4,
+          doneZero: {
+            toState: 2,
+            actions,
           },
         },
+        exit,
+      },
+
+      2: {},
+    },
+  });
+}
+
+function prepareTestSMEntryError(
+  mBus,
+  onActionError: SMErrorAction,
+  entry,
+  exit
+) {
+  return new StateMachine({
+    name: "Guard tester",
+    contextObject: null,
+    messageBus: mBus,
+    onActionError: onActionError,
+    mBusErrorMessage: errorMessage,
+
+    stateMap: {
+      0: {
+        initial: true,
+        events: {
+          doneZero: {
+            toState: 2,
+          },
+        },
+        exit,
       },
 
       2: {
-        entryMessage: "at-state-2",
-        events: {
-          doneTwo: [
-            {
-              toState: "finish",
-              guards: [() => true],
-            },
-          ],
-        },
-
-        exitMessage: "leaving-state-2",
+        entry,
       },
+    },
+  });
+}
 
-      3: {
-        entry: () => {
-          throw new Error();
-        },
-      },
+function prepareTestSMExitError(mBus, onActionError: SMErrorAction, exit) {
+  return new StateMachine({
+    name: "Guard tester",
+    contextObject: null,
+    messageBus: mBus,
+    onActionError: onActionError,
+    mBusErrorMessage: errorMessage,
 
-      4: {
-        entryMessage: "in-four",
+    stateMap: {
+      0: {
+        initial: true,
         events: {
-          finish: {
-            toState: "finish",
+          doneZero: {
+            toState: 2,
           },
         },
-        exit: () => {
-          throw new Error();
-        },
+        exit,
       },
 
-      finish: {
-        entry: () => console.log("Done"),
-        entryMessage: "at-finish",
-      },
+      2: {},
     },
   });
 }

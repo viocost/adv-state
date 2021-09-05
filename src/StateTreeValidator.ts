@@ -1,5 +1,5 @@
 import { StateMachineVisitor } from "./AbstractVisitor";
-import { State } from "./State";
+import { IState } from "./types";
 import {
   InitialStateError,
   InvalidActionType,
@@ -18,14 +18,14 @@ export class StateTreeValidator
   extends StateMachineVisitor
   implements SMVisitor
 {
-  enterState(state: State) {
+  enterState(state: IState) {
     this.validateActions(state.config.entry);
     this.validateActions(state.config.exit);
     this.validateEvents(state, state.config?.events);
     this.validateInitialSubstate(state);
   }
 
-  validateEvents(state: State, events?: SMEvents) {
+  validateEvents(state: IState, events?: SMEvents) {
     if (!events) return;
 
     for (const name in events) {
@@ -33,7 +33,7 @@ export class StateTreeValidator
     }
   }
 
-  validateInitialSubstate(state: State) {
+  validateInitialSubstate(state: IState) {
     if (state.isLeafState) return;
 
     const initialCount = Array.from(Object.values(state.substates)).reduce(
@@ -49,7 +49,7 @@ export class StateTreeValidator
   }
 
   validateEventDescriptions(
-    state: State,
+    state: IState,
     description: EventDescription | Array<EventDescription>
   ) {
     asArray(description).forEach((description) => {
@@ -59,7 +59,7 @@ export class StateTreeValidator
     });
   }
 
-  validateStateTransition(state: State, toState: SMStateName) {
+  validateStateTransition(state: IState, toState: SMStateName) {
     if (!state.parent.substates[toState]) {
       throw new InvalidTransition(
         `Transition ${state.name} -> ${toState}: ${state.parent.name} doesn't have substate ${toState}`

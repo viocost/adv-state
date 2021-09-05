@@ -1,7 +1,5 @@
 import { StateMachineVisitor } from "./AbstractVisitor";
-import { StateMachine } from "./AdvStateMachine";
-import { State } from "./State";
-import { SMVisitor } from "./types";
+import { SMVisitor, IState, IStateMachine } from "./types";
 
 export class StateMachinePrettyPrinter
   extends StateMachineVisitor
@@ -12,20 +10,20 @@ export class StateMachinePrettyPrinter
     super();
   }
 
-  enterStateMachine(stateMachine: StateMachine) {
+  enterStateMachine(stateMachine: IStateMachine) {
     console.log(`\nState machine ${stateMachine.name}`);
   }
 
-  exitStateMachine(stateMachine: StateMachine) {
+  exitStateMachine(stateMachine: IStateMachine) {
     console.log(`STATE MACHINE END===============\n\n`);
   }
 
-  enterState(state: State) {
+  enterState(state: IState) {
     console.log(`${this.spaces()}${state.name} {`);
     this.indent();
   }
 
-  exitState(state: State) {
+  exitState(state: IState) {
     this.dedent();
     console.log(`${this.spaces()}}`);
   }

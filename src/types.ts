@@ -1,17 +1,46 @@
-import { StateMachine } from "./AdvStateMachine";
-import { State } from "./State";
+export interface IStateMachine {
+  name?: string;
+  logger: LogProcessor;
+  run(): void;
+  accept(visitor: SMVisitor): void;
+  update(message: SMMessageBusMessage): void;
 
-export interface IStateMachine {}
+  dispatchMessage(message: SMMessageName, eventArgs: any): void;
+  processEvent(eventName: SMEvent, eventArgs: any): void;
+  handleActionError(
+    error: Error,
+    state: IState,
+    eventName: SMEvent,
+    eventArgs: any
+  ): void;
+  handleGuardError(
+    error: Error,
+    state: IState,
+    eventName: SMEvent,
+    eventArgs: any
+  ): void;
+  handleAmbiguousTransition(state: IState, eventName: SMEvent): void;
+  get state(): string;
+}
 
-export type SMErrorHandler = (error: Error) => any;
+export interface IState {
+  enabled: boolean;
+  enabledSubstate?: IState;
 
-export type SMEvent = string | number | symbol;
+  substates: Substates;
+  logger: any;
+  parallel: boolean;
+  initial: boolean;
+  isLeafState: boolean;
 
-export type SMStateName = string | number;
+  // Reference for initial substate
+  initialSubstate?: IState;
 
-export interface SMState {
+  // Reference for history substate
+  historySubstate?: IState;
   name: SMStateName;
-
+  parent?: IState;
+  config: StateDescription;
   withdraw(eventName: SMEvent, eventArgs?: any): void;
   resume(eventName: SMEvent, eventArgs?: any): void;
   performTransition(
@@ -19,9 +48,15 @@ export interface SMState {
     eventName: SMEvent,
     eventArgs?: any
   ): void;
-
+  accept(visitor: SMVisitor): void;
   processEvent(event: SMEvent, payload: any): void;
 }
+
+export type SMErrorHandler = (error: Error) => any;
+
+export type SMEvent = string | number | symbol;
+
+export type SMStateName = string | number;
 
 export type SMContext = {};
 
@@ -97,11 +132,11 @@ export type StateMap = {
 };
 
 export type EventMap = {
-  [key: SMEvent]: State;
+  [key: SMEvent]: IState;
 };
 
 export type Substates = {
-  [key: SMStateName]: State;
+  [key: SMStateName]: IState;
 };
 
 export type StateMachineConfig = {
@@ -203,10 +238,10 @@ export interface LogProcessor {
 }
 
 export interface SMVisitor {
-  enterStateMachine: (stateMachine: StateMachine) => void;
-  exitStateMachine: (stateMachine: StateMachine) => void;
-  enterState: (state: State) => void;
-  exitState: (state: State) => void;
+  enterStateMachine: (stateMachine: IStateMachine) => void;
+  exitStateMachine: (stateMachine: IStateMachine) => void;
+  enterState: (state: IState) => void;
+  exitState: (state: IState) => void;
   enterEventDescription: (eventDescription: EventDescription) => void;
   exitEventDescription: (eventDescription: EventDescription) => void;
 }

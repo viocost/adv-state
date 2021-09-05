@@ -103,21 +103,6 @@ export class StateMachine implements IStateMachine, Visitable {
     this.eventMap = this.mapEvents();
   }
 
-  initLogger(logLevel: LogLevel) {
-    this.logger = new LogFilter(console, logLevel);
-  }
-
-  initStateTree(stateMap: StateMap) {
-    return new State(this, "root", { states: stateMap }, null);
-  }
-
-  initMessageBus(messageBus: SMMessageBus) {
-    if (messageBus) {
-      this.messageBus = messageBus;
-      messageBus.subscribe(this);
-    }
-  }
-
   run() {
     this.root.resume();
   }
@@ -128,6 +113,12 @@ export class StateMachine implements IStateMachine, Visitable {
     visitor.exitStateMachine(this);
   }
 
+  update(message: SMMessageBusMessage) {
+    this.logger.debug("UPDATE called");
+    const [messageName, payload] = message;
+    this.handle[messageName](payload);
+  }
+
   dispatchMessage(message: SMMessageName, eventArgs: any) {
     if (!this.messageBus || !message) return;
 
@@ -135,13 +126,22 @@ export class StateMachine implements IStateMachine, Visitable {
     this.messageBus.deliver([message, eventArgs], this);
   }
 
-  update(message: SMMessageBusMessage) {
-    this.logger.debug("UPDATE called");
-    const [messageName, payload] = message;
-    this.handle[messageName](payload);
+  private initLogger(logLevel: LogLevel) {
+    this.logger = new LogFilter(console, logLevel);
   }
 
-  mapEvents() {
+  private initStateTree(stateMap: StateMap) {
+    return new State(this, "root", { states: stateMap }, null);
+  }
+
+  private initMessageBus(messageBus: SMMessageBus) {
+    if (messageBus) {
+      this.messageBus = messageBus;
+      messageBus.subscribe(this);
+    }
+  }
+
+  private mapEvents() {
     const eventMapper = new EventMapper();
 
     this.root.accept(eventMapper);
@@ -229,18 +229,18 @@ export class StateMachine implements IStateMachine, Visitable {
     }
   }
 
-  validateStateTree(root: State) {
+  private validateStateTree(root: State) {
     const stateTreeValidator = new StateTreeValidator();
     root.accept(stateTreeValidator);
   }
 
-  emergencyShutdown(error: string) {
+  private emergencyShutdown(error: string) {
     this.logger.error(`===!!EMERGENCY SHUTDOWN: ${error}`);
     this.halt(Result.Error);
     this.errorneousHaltMessage = error;
   }
 
-  halt(result: Result) {
+  private halt(result: Result) {
     this.halted = true;
     this.result = result;
 

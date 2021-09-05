@@ -1,9 +1,8 @@
-import { log } from "console";
-import { StateMachine } from "./AdvStateMachine";
 import {
   SMStateName,
-  SMState,
   SMEvent,
+  IStateMachine,
+  IState,
   EventDescription,
   StateDescription,
   SMAction,
@@ -38,9 +37,9 @@ import { actionsAsArray, asArray } from "./util";
  *
  *  */
 
-export class State implements SMState, Visitable {
+export class State implements IState, Visitable {
   enabled: boolean = false;
-  enabledSubstate?: State;
+  enabledSubstate?: IState;
 
   substates: Substates = {};
   logger: any;
@@ -49,16 +48,16 @@ export class State implements SMState, Visitable {
   isLeafState: boolean;
 
   // Reference for initial substate
-  initialSubstate?: State;
+  initialSubstate?: IState;
 
   // Reference for history substate
-  historySubstate?: State;
+  historySubstate?: IState;
 
   constructor(
-    private stateMachine: StateMachine,
+    private stateMachine: IStateMachine,
     public name: SMStateName,
     public config: StateDescription,
-    public parent?: State
+    public parent?: IState
   ) {
     this.stateMachine.logger.debug(`Initializing state ${name}`);
     this.initial = !!config.initial;
@@ -134,11 +133,11 @@ export class State implements SMState, Visitable {
     this.setHistorySubstate(this.initialSubstate);
   }
 
-  setEnabledSubstate(state?: State) {
+  setEnabledSubstate(state?: IState) {
     this.enabledSubstate = state;
   }
 
-  setHistorySubstate(state?: State) {
+  setHistorySubstate(state?: IState) {
     this.historySubstate = state;
   }
 

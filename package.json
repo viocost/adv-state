@@ -1,7 +1,7 @@
 {
   "name": "adv-state",
-  "version": "2.0.1",
-  "description": "Implementation of a basic state machine",
+  "version": "2.0.2",
+  "description": "Feature rich state machine implementation",
   "main": "dist/index.js",
   "types": "dist/types.d.ts",
   "scripts": {

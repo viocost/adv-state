@@ -1,20 +1,31 @@
 {
   "name": "adv-state",
-  "version": "1.0.2",
+  "version": "2.0.0",
   "description": "Implementation of a basic state machine",
-  "main": "AdvStateMachine.js",
+  "main": "dist/index.js",
+  "types": "dist/types.d.ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest",
+    "build": "tsc"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/viocost/adv-state.git"
   },
-  "author": "",
-  "license": "ISC",
+  "author": "Konstantin Y. Rybakov <viocost@gmail.com>",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/viocost/adv-state/issues"
   },
   "homepage": "https://github.com/viocost/adv-state#readme",
-  "dependencies": {}
+  "dependencies": {},
+  "devDependencies": {
+    "@types/jest": "^27.0.1",
+    "@types/node": "^16.7.6",
+    "jest": "^27.1.0",
+    "prettier": "^2.3.2",
+    "ts-jest": "^27.0.5",
+    "ts-node": "^10.2.1",
+    "typescript": "^4.4.2"
+  }
 }

@@ -1,0 +1,42 @@
+* Roadmap [8/15]
+** TODO Implement defensive handling i.e. machine never blows up
+*** TODO Add configuration option for errror handler
+*** TODO Add globalErrorMessage configuration to send a message on failure in any of user defined functions
+** DONE Migrate to typescript
+CLOSED: [2021-09-05 Sun 17:50]
+*** DONE Fix all implicit any types
+CLOSED: [2021-09-05 Sun 17:50]
+** TODO Add unit tests
+*** DONE Guards error handling
+CLOSED: [2021-09-05 Sun 17:51]
+*** TODO Guarded transitions
+*** TODO Ambiguous transitions handling
+*** DONE basic handle events
+CLOSED: [2021-09-05 Sun 17:52]
+*** TODO Message delivery on entry, exit, transitions action
+*** TODO Error handling on entry, exit, transition action error
+** TODO Implement concurrent region
+** TODO Implement transient state
+** TODO Implement timeout transitions
+
+** TODO Add documentation
+
+** TODO Emit xstate visualization
+*** DONE Implement visitor
+CLOSED: [2021-09-05 Sun 17:50]
+
+** DONE Implement hierarchical state (low priority)
+CLOSED: [2021-09-05 Sun 17:50]
+** DONE Add code structure
+CLOSED: [2021-09-01 Wed 00:45]
+** DONE Implement context
+CLOSED: [2021-08-29 Sun 13:22]
+There shouldn't be any context, that is what argumetns used for.
+** DONE Add logger interface
+CLOSED: [2021-08-31 Tue 22:49]
+** DONE Integrate message bus
+CLOSED: [2021-08-31 Tue 22:49]
+** DONE Implement auto message sending interface
+CLOSED: [2021-08-31 Tue 22:50]
+** DONE Decouple from obs-bus
+CLOSED: [2021-08-31 Tue 22:49]

@@ -3,7 +3,6 @@ import {
   StateMachineConfig,
   StateMap,
   SMEvent,
-  SMAction,
   SMMessageName,
   SMMessageBusMessage,
   LogLevel,
@@ -18,13 +17,13 @@ import {
 
 import { inspect } from "util";
 import { State } from "./State";
-import { LoggerContainer } from "./LoggerContainer";
 import { LogFilter } from "./LogFilter";
 import { EventMapper } from "./EventMapper";
 import { StateTreeValidator } from "./StateTreeValidator";
 import { FakeBus } from "./FakeBus";
 import { createHandler } from "./StateMachineEventHandler";
 import { AmbiguousTransition, GuardError } from "./StateMachineError";
+import { StateGetter } from "./StateGetter";
 
 /**
  *
@@ -100,7 +99,7 @@ export class StateMachine implements IStateMachine, Visitable {
   }
 
   initLogger(logLevel: LogLevel) {
-    this.logger = new LoggerContainer(new LogFilter(console, logLevel));
+    this.logger = new LogFilter(console, logLevel);
   }
 
   initStateTree(stateMap: StateMap) {
@@ -180,20 +179,27 @@ export class StateMachine implements IStateMachine, Visitable {
     }
   }
 
-  handleAmbiguousTransition(error: Error, state: State, eventName: SMEvent) {
+  handleAmbiguousTransition(state: State, eventName: SMEvent) {
     if (this.onAmbiguousTransition === SMErrorAction.Ignore) return;
 
-    const errMessage = `Guard condition threw Exception: ${error} in state ${state} on event ${String(
-      eventName
-    )}`;
+    const errMessage = `Ambiguous transition error in state ${
+      state.name
+    } on event ${String(eventName)}`;
 
     this.logger.error(errMessage);
     this.messageBus.deliver([this.mBusErrorMessage, errMessage], this);
 
     if (this.onAmbiguousTransition === SMErrorAction.Shutdown) {
-      throw new AmbiguousTransition(error.message);
+      throw new AmbiguousTransition(errMessage);
     }
   }
+
+  get state() {
+    const stateGetter = new StateGetter();
+    this.root.accept(stateGetter);
+    return stateGetter.asString();
+  }
+
   handleGuardError(
     error: Error,
     state: State,

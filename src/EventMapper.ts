@@ -1,8 +1,9 @@
 import { State } from "./State";
-import { EventMap, SMEvent, StateVisitor } from "./types";
+import { EventMap, SMEvent, SMVisitor } from "./types";
 import { DuplicateEventName } from "./StateMachineError";
+import { StateMachineVisitor } from "./AbstractVisitor";
 
-export class EventMapper implements StateVisitor {
+export class EventMapper extends StateMachineVisitor implements SMVisitor {
   private eventMap: EventMap = {};
 
   enterState(state: State) {
@@ -11,8 +12,6 @@ export class EventMapper implements StateVisitor {
       this.eventMap[event] = state;
     }
   }
-
-  exitState(...args: any) {}
 
   getMap() {
     return this.eventMap;

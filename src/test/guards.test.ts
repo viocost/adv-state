@@ -35,6 +35,7 @@ describe("Advanced test with guard conditions", () => {
   it("Should verify the output", () => {
     console.log("Messages received");
     console.dir(bus.receivedMessages);
+    console.log(sm.state);
     expect(bus.receivedMessages[0]).toBeDefined();
   });
 });

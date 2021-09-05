@@ -9,7 +9,7 @@ export function createHandler(stateMachine: StateMachine) {
       if (event in target.eventMap) {
         return (payload?: any) => {
           setImmediate(() => {
-            if (target.error) return;
+            if (target.halted) return;
             try {
               target.processEvent(event, payload);
             } catch (err) {

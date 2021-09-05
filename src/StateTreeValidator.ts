@@ -1,3 +1,4 @@
+import { StateMachineVisitor } from "./AbstractVisitor";
 import { State } from "./State";
 import {
   InitialStateError,
@@ -9,19 +10,20 @@ import {
   SMAction,
   SMEvents,
   SMStateName,
-  StateVisitor,
+  SMVisitor,
 } from "./types";
 import { asArray } from "./util";
 
-export class StateTreeValidator implements StateVisitor {
+export class StateTreeValidator
+  extends StateMachineVisitor
+  implements SMVisitor
+{
   enterState(state: State) {
     this.validateActions(state.config.entry);
     this.validateActions(state.config.exit);
     this.validateEvents(state, state.config?.events);
     this.validateInitialSubstate(state);
   }
-
-  exitState(...args: any) {}
 
   validateEvents(state: State, events?: SMEvents) {
     if (!events) return;

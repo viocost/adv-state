@@ -9,7 +9,6 @@ import {
   StateMap,
   Visitable,
   SMVisitor,
-  StateVisitor,
   Substates,
 } from "./types";
 import { actionsAsArray, asArray } from "./util";
@@ -66,7 +65,7 @@ export class State implements SMState, Visitable {
     this.isLeafState = Object.keys(this.substates).length === 0;
   }
 
-  accept(visitor: StateVisitor | SMVisitor) {
+  accept(visitor: SMVisitor) {
     visitor.enterState(this);
     for (let substate of Object.values(this.substates)) {
       substate.accept(visitor);
@@ -195,7 +194,7 @@ export class State implements SMState, Visitable {
       return;
     }
 
-    this.logProcessEventStart(eventName, eventArgs);
+    //this.logProcessEventStart(eventName, eventArgs);
 
     let eventDescription = this.getEventDescription(eventName, eventArgs);
 
@@ -314,6 +313,4 @@ export class State implements SMState, Visitable {
       return false;
     }
   }
-
-  logProcessEventStart(eventName: SMEvent, eventArgs?: any) {}
 }

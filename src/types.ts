@@ -203,15 +203,12 @@ export interface SMVisitor {
   exitStateMachine: (stateMachine: StateMachine) => void;
   enterState: (state: State) => void;
   exitState: (state: State) => void;
-}
-
-export interface StateVisitor {
-  enterState: (state: State) => void;
-  exitState: (state: State) => void;
+  enterEventDescription: (eventDescription: EventDescription) => void;
+  exitEventDescription: (eventDescription: EventDescription) => void;
 }
 
 export interface Visitable {
-  accept: (visitor: SMVisitor | StateVisitor) => void;
+  accept: (visitor: SMVisitor) => void;
 }
 
 export enum SMErrorAction {

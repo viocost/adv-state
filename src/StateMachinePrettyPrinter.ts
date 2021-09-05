@@ -1,10 +1,16 @@
+import { StateMachineVisitor } from "./AbstractVisitor";
 import { StateMachine } from "./AdvStateMachine";
 import { State } from "./State";
-import { SMVisitor, StateVisitor } from "./types";
+import { SMVisitor } from "./types";
 
-export class StateMachinePrettyPrinter implements SMVisitor, StateVisitor {
+export class StateMachinePrettyPrinter
+  extends StateMachineVisitor
+  implements SMVisitor
+{
   indentation = 0;
-  constructor(private indentStep = 2) {}
+  constructor(private indentStep = 2) {
+    super();
+  }
 
   enterStateMachine(stateMachine: StateMachine) {
     console.log(`\nState machine ${stateMachine.name}`);

@@ -1,5 +1,5 @@
 import { LogLevel, Result, SMErrorAction, SMMessageBusMessage } from "../types";
-import { StateMachine } from "../AdvStateMachine";
+import StateMachine from "../AdvStateMachine";
 import { FakeMBus } from "./TestBus";
 import { GuardError } from "../StateMachineError";
 

@@ -1,4 +1,4 @@
-import { StateMachine } from "./AdvStateMachine";
+import StateMachine from "./AdvStateMachine";
 import { InHaltedState } from "./StateMachineError";
 
 export function createHandler(stateMachine: StateMachine) {

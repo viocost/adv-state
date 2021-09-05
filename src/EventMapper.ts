@@ -1,7 +1,7 @@
 import { State } from "./State";
 import { EventMap, SMEvent, SMVisitor } from "./types";
 import { DuplicateEventName } from "./StateMachineError";
-import { StateMachineVisitor } from "./AbstractVisitor";
+import StateMachineVisitor from "./AbstractVisitor";
 
 export class EventMapper extends StateMachineVisitor implements SMVisitor {
   private eventMap: EventMap = {};

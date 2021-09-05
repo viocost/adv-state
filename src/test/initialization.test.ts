@@ -1,4 +1,4 @@
-import { StateMachine } from "../AdvStateMachine";
+import StateMachine from "../AdvStateMachine";
 
 describe("Basic initialization", () => {
   it("Should initialize state machine", () => {

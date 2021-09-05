@@ -1,4 +1,4 @@
-import { StateMachineVisitor } from "./AbstractVisitor";
+import StateMachineVisitor from "./AbstractVisitor";
 import { State } from "./State";
 import { SMStateName, SMVisitor } from "./types";
 

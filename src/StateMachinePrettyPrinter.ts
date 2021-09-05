@@ -1,4 +1,4 @@
-import { StateMachineVisitor } from "./AbstractVisitor";
+import StateMachineVisitor from "./AbstractVisitor";
 import { SMVisitor, IState, IStateMachine } from "./types";
 
 export class StateMachinePrettyPrinter

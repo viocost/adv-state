@@ -29,7 +29,7 @@ import {
 } from "./StateMachineError";
 import { StateGetter } from "./StateGetter";
 
-export class StateMachine implements IStateMachine, Visitable {
+export default class StateMachine implements IStateMachine, Visitable {
   // Logger
   logger: LogProcessor;
 

@@ -1,4 +1,4 @@
-import { StateMachine } from "../AdvStateMachine";
+import StateMachine from "../AdvStateMachine";
 import { SMErrorAction, SMMessageBusMessage } from "../types";
 import { EventEmitter } from "events";
 

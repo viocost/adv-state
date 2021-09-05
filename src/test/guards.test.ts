@@ -1,4 +1,4 @@
-import { StateMachine } from "../AdvStateMachine";
+import StateMachine from "../AdvStateMachine";
 import { FakeMBus } from "./TestBus";
 
 describe("Advanced test with guard conditions", () => {

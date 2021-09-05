@@ -1,6 +1,6 @@
 import { SMVisitor, EventDescription, IState, IStateMachine } from "./types";
 
-export abstract class StateMachineVisitor implements SMVisitor {
+export default abstract class StateMachineVisitor implements SMVisitor {
   enterState(state: IState) {}
   exitState(state: IState) {}
   enterStateMachine(stateMachine: IStateMachine) {}

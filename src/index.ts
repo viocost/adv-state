@@ -1,5 +1,5 @@
-import { StateMachineVisitor } from "./AbstractVisitor";
-import { StateMachine } from "./AdvStateMachine";
+import StateMachineVisitor from "./AbstractVisitor";
+import StateMachine from "./AdvStateMachine";
 
 export { StateMachineVisitor, StateMachine };
 

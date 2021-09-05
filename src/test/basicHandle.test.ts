@@ -1,4 +1,4 @@
-import { StateMachine } from "../AdvStateMachine";
+import StateMachine from "../AdvStateMachine";
 
 describe("Basic handle tests", () => {
   const startEntry = jest.fn();

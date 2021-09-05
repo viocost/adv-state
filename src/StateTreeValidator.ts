@@ -1,4 +1,4 @@
-import { StateMachineVisitor } from "./AbstractVisitor";
+import StateMachineVisitor from "./AbstractVisitor";
 import { IState } from "./types";
 import {
   InitialStateError,

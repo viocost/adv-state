@@ -1,4 +1,4 @@
-import { StateMachine } from "../AdvStateMachine";
+import StateMachine from "../AdvStateMachine";
 
 describe("Advanced test with guard conditions", () => {
   const sm = prepareTestSM();

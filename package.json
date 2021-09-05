@@ -2,7 +2,8 @@
   "name": "adv-state",
   "version": "2.0.0",
   "description": "Implementation of a basic state machine",
-  "main": "AdvStateMachine.js",
+  "main": "dist/index.js",
+  "types": "dist/types.d.ts",
   "scripts": {
     "test": "jest",
     "build": "tsc"
@@ -11,8 +12,8 @@
     "type": "git",
     "url": "git+https://github.com/viocost/adv-state.git"
   },
-  "author": "",
-  "license": "ISC",
+  "author": "Konstantin Y. Rybakov <viocost@gmail.com>",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/viocost/adv-state/issues"
   },

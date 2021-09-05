@@ -1,6 +1,6 @@
 {
   "name": "adv-state",
-  "version": "1.0.2",
+  "version": "2.0.0",
   "description": "Implementation of a basic state machine",
   "main": "AdvStateMachine.js",
   "scripts": {

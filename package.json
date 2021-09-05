@@ -1,9 +1,9 @@
 {
   "name": "adv-state",
-  "version": "2.0.4",
+  "version": "2.0.5",
   "description": "Feature rich state machine implementation",
   "main": "dist/index.js",
-  "types": "dist/types.d.ts",
+  "types": "dist/index.d.ts",
   "scripts": {
     "test": "jest",
     "build": "tsc"

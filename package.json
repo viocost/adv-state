@@ -18,9 +18,7 @@
     "url": "https://github.com/viocost/adv-state/issues"
   },
   "homepage": "https://github.com/viocost/adv-state#readme",
-  "dependencies": {
-    "obs-bus": "^1.0.3"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@types/jest": "^27.0.1",
     "@types/node": "^16.7.6",

@@ -1,5 +1,6 @@
 # ADV-STATE: A FEATURE RICH STATE MACHINE
 This implementation of a state machine made to overcome some limitations of famous XState.
+This is currently in Alpha stage, so documentation will be added, bugs fixed.
 
 # What can it do
 1. Simple state management with entry, exit and onTransition actions.
@@ -29,6 +30,9 @@ const sm = new StateMachine({
             entryMessage: "IN_ONE", /*This message will be pushed to the message bus with passed payload once state entered*/
             exitMessage: "EXIT_ONE", /*This message will be pushed to the message bus with passed payload just before leaving the state*/
             exit: [/*Single function or array of exit functions*/], 
+            states: {
+                /*nested states*/
+            }, 
             events: { /*Supported events in current state */
                 eventOne: [
                     {
@@ -49,20 +53,28 @@ const sm = new StateMachine({
 
         2: {
             final: true // Once entered, the machine is not going to process any events
+            // State 2 description
         }, 
         
         3: {
-        
+           // State 3 description
         }
-        
-
-    
     }
-
 })
+
+// To enter initial state
+sm.run()
+
+// Sending events could be done directly like this:
+sm.handle.eventOne(/* some payload */)
+
+// But better way is to send event through message bus 
+// The message bus must call update method on state machine and pass a payload in form of array:
+sm.update(["eventOne", {/*payload*/}])
 
 ```
 
+# TO BE CONTINUED...
 
 
 

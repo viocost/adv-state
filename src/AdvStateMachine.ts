@@ -29,14 +29,6 @@ import {
 } from "./StateMachineError";
 import { StateGetter } from "./StateGetter";
 
-/**
- *
- * Actions
- *   array of lambdas passed to the events
- *   Each will be called with
- *     StateMachine, EventName, EventArgs
- */
-
 export class StateMachine implements IStateMachine, Visitable {
   // Logger
   logger: LogProcessor;

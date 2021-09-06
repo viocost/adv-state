@@ -1,6 +1,6 @@
 {
   "name": "adv-state",
-  "version": "2.0.5",
+  "version": "2.0.5-alpha",
   "description": "Feature rich state machine implementation",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

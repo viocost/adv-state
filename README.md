@@ -1,6 +1,7 @@
 # ADV-STATE: A FEATURE RICH STATE MACHINE
 This implementation of a state machine made to overcome some limitations of famous XState.
-This is currently in Alpha stage, so documentation will be added, bugs fixed.
+This is currently in Alpha stage, so documentation will be added, bugs fixed, and API may drastically change.
+
 
 # What can it do
 1. Simple state management with entry, exit and onTransition actions.

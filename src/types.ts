@@ -26,6 +26,7 @@ export interface IStateMachine {
 export interface IState {
   enabled: boolean;
   enabledSubstate?: IState;
+  hasEvent(event: SMEvent): boolean;
 
   substates: Substates;
   logger: any;

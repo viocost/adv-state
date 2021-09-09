@@ -13,6 +13,7 @@ import {
   SMErrorAction,
   EventMap,
   Result,
+  IState,
 } from "./types";
 
 import { inspect } from "util";
@@ -20,6 +21,7 @@ import { State } from "./State";
 import { LogFilter } from "./LogFilter";
 import { EventMapper } from "./EventMapper";
 import { StateTreeValidator } from "./StateTreeValidator";
+import { EventStateMatcher } from "./EventStateMatcher";
 import { FakeBus } from "./FakeBus";
 import { createHandler } from "./StateMachineEventHandler";
 import {
@@ -70,6 +72,7 @@ export default class StateMachine implements IStateMachine, Visitable {
   onDisabledStateEvent: SMErrorAction = SMErrorAction.Ignore;
   onMBusError: SMErrorAction = SMErrorAction.Shutdown;
   onLoggerError: SMErrorAction = SMErrorAction.Shutdown;
+  private eventStateMatcher: EventStateMatcher;
 
   constructor({
     name,
@@ -101,6 +104,7 @@ export default class StateMachine implements IStateMachine, Visitable {
     this.root = this.initStateTree(stateMap);
     this.validateStateTree(this.root);
     this.eventMap = this.mapEvents();
+    this.eventStateMatcher = new EventStateMatcher(this.root);
   }
 
   run() {
@@ -126,38 +130,18 @@ export default class StateMachine implements IStateMachine, Visitable {
     this.messageBus.deliver([message, eventArgs], this);
   }
 
-  private initLogger(logLevel: LogLevel) {
-    this.logger = new LogFilter(console, logLevel);
-  }
-
-  private initStateTree(stateMap: StateMap) {
-    return new State(this, "root", { states: stateMap }, null);
-  }
-
-  private initMessageBus(messageBus: SMMessageBus) {
-    if (messageBus) {
-      this.messageBus = messageBus;
-      messageBus.subscribe(this);
-    }
-  }
-
-  private mapEvents() {
-    const eventMapper = new EventMapper();
-
-    this.root.accept(eventMapper);
-
-    this.logger.debug(
-      `${this.name} recognizes events ${inspect(
-        Array.from(Object.keys(eventMapper.getMap()))
-      )}`
-    );
-    return eventMapper.getMap();
-  }
-
   processEvent(eventName: SMEvent, eventArgs: any) {
     this.logger.debug(`Processing event: ${String(eventName)}`);
+
+    const states =
+      this.eventStateMatcher.getActiveStateStackForEvent(eventName);
+
     try {
-      this.eventMap[eventName]?.processEvent(eventName, eventArgs);
+      let state: IState;
+
+      while ((state = states.pop())) {
+        state.processEvent(eventName, eventArgs);
+      }
     } catch (error) {
       this.emergencyShutdown(error);
     }
@@ -245,5 +229,33 @@ export default class StateMachine implements IStateMachine, Visitable {
     this.result = result;
 
     this.logger.info(`Machine halted`);
+  }
+
+  private initLogger(logLevel: LogLevel) {
+    this.logger = new LogFilter(console, logLevel);
+  }
+
+  private initStateTree(stateMap: StateMap) {
+    return new State(this, "root", { states: stateMap }, null);
+  }
+
+  private initMessageBus(messageBus: SMMessageBus) {
+    if (messageBus) {
+      this.messageBus = messageBus;
+      messageBus.subscribe(this);
+    }
+  }
+
+  private mapEvents() {
+    const eventMapper = new EventMapper();
+
+    this.root.accept(eventMapper);
+
+    this.logger.debug(
+      `${this.name} recognizes events ${inspect(
+        Array.from(Object.keys(eventMapper.getMap()))
+      )}`
+    );
+    return eventMapper.getMap();
   }
 }

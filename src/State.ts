@@ -100,6 +100,7 @@ export class State implements IState, Visitable {
   }
 
   withdraw(eventName: SMEvent, eventArgs: any) {
+    this.stateMachine.logger.debug(`Withdrawing from state ${this.name}`);
     // Call substates to withdraw
     if (this.enabledSubstate) {
       this.enabledSubstate.withdraw(eventName, eventArgs);
@@ -133,6 +134,10 @@ export class State implements IState, Visitable {
     this.setHistorySubstate(this.initialSubstate);
   }
 
+  hasEvent(event: SMEvent): boolean {
+    return event in this.config.events;
+  }
+
   setEnabledSubstate(state?: IState) {
     this.enabledSubstate = state;
   }
@@ -164,12 +169,19 @@ export class State implements IState, Visitable {
   }
 
   private performExitActions(eventName: SMEvent, eventArgs?: any) {
+    this.stateMachine.logger.debug(
+      `Performing exit actions in state ${this.name}`
+    );
     const exitActions = actionsAsArray(this.config.exit);
 
     this.performActions(exitActions, eventName, eventArgs);
   }
 
   private performEntryActions(eventName: SMEvent, eventArgs?: any) {
+    this.stateMachine.logger.debug(
+      `Performing entry actions in state ${this.name}`
+    );
+
     const entryActions = actionsAsArray(this.config.entry);
 
     this.performActions(entryActions, eventName, eventArgs);

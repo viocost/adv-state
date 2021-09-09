@@ -1,4 +1,6 @@
-* Roadmap [8/15]
+* Roadmap [8/16]
+** TODO We must be able to have same named events in differernt states!
+If same-named-events are in nested states, then first we perform child transitions(because we guarantee that they are within parents) and then parent.
 ** TODO Implement defensive handling i.e. machine never blows up
 *** TODO Add configuration option for errror handler
 *** TODO Add globalErrorMessage configuration to send a message on failure in any of user defined functions

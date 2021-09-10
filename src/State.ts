@@ -102,10 +102,7 @@ export class State implements IState, Visitable {
   withdraw(eventName: SMEvent, eventArgs: any) {
     this.stateMachine.logger.debug(`Withdrawing from state ${this.name}`);
     // Call substates to withdraw
-    if (this.enabledSubstate) {
-      this.enabledSubstate.withdraw(eventName, eventArgs);
-      this.setEnabledSubstate(undefined);
-    }
+    this.withdrawSubstates(eventName, eventArgs);
 
     // Perform exit actions
     this.performExitActions(eventName, eventArgs);
@@ -113,6 +110,17 @@ export class State implements IState, Visitable {
 
     // Set itself off
     this.setEnabled(false);
+  }
+
+  withdrawSubstates(eventName: SMEvent, eventArgs: any) {
+    if (this.parallel) {
+      for (const state in this.substates) {
+        this.substates[state].withdraw(eventName, eventArgs);
+      }
+    } else {
+      this.enabledSubstate?.withdraw(eventName, eventArgs);
+      this.setEnabledSubstate(undefined);
+    }
   }
 
   resume(eventName?: SMEvent, eventArgs?: any) {
@@ -123,15 +131,36 @@ export class State implements IState, Visitable {
     this.sendEntryMessage(eventArgs);
     this.performEntryActions(eventName, eventArgs);
 
+    this.resumeSubstates(eventName, eventArgs);
+  }
+
+  resumeSubstates(eventName: SMEvent, eventArgs: any) {
     // call resume on child state that must be activated
     // We should either resume initial child,
     // or the last tha has been active,
     // or specified
     // but for now only initial
-    this.initialSubstate?.resume(eventName, eventArgs);
 
-    this.setEnabledSubstate(this.initialSubstate);
-    this.setHistorySubstate(this.initialSubstate);
+    if (this.parallel) {
+      this.resumeParallelRegion(eventName, eventArgs);
+      return;
+    }
+
+    const resumingSubstate = this.getResumingSubstate();
+
+    resumingSubstate?.resume(eventName, eventArgs);
+    this.setEnabledSubstate(resumingSubstate);
+    this.setHistorySubstate(this.historySubstate || resumingSubstate);
+  }
+
+  getResumingSubstate() {
+    return this.initialSubstate;
+  }
+
+  resumeParallelRegion(eventName: SMEvent, eventArgs: any) {
+    for (const state in this.substates) {
+      this.substates[state].resume(eventName, eventArgs);
+    }
   }
 
   hasEvent(event: SMEvent): boolean {

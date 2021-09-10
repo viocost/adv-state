@@ -2,8 +2,9 @@ import StateMachine from "../AdvStateMachine";
 import { FakeMBus } from "./TestBus";
 
 describe("Parallel state test", () => {
+  const testArray = [];
   const bus = new FakeMBus();
-  const sm = prepareTestSM(bus);
+  const sm = prepareTestSM(bus, testArray);
   sm.run();
   beforeAll(() => {
     return new Promise((resolve) => {
@@ -17,6 +18,9 @@ describe("Parallel state test", () => {
   it("Should verify valid output", () => {
     console.dir(bus.receivedMessages);
     expect(sm.halted).toBeTruthy();
+    expect(testArray.length).toBe(2);
+    expect(testArray[0]).toBe("foo a1");
+    expect(testArray[1]).toBe("foo 1");
   });
 });
 

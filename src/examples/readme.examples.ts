@@ -1,4 +1,4 @@
-import { StateMachine } from "adv-state";
+import { StateMachine } from "..";
 
 const sm = new StateMachine({
   name: "My first state machine",

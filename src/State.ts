@@ -10,6 +10,7 @@ import {
   Visitable,
   SMVisitor,
   Substates,
+  Result,
 } from "./types";
 import { actionsAsArray, asArray } from "./util";
 
@@ -24,7 +25,7 @@ import { actionsAsArray, asArray } from "./util";
  *
  * Event processing:
  * First we find the right event descriptor by evaluating guards
- *
+ *k
  * With descriptor:
  * If there are just actions - then they are executed.
  *
@@ -45,6 +46,7 @@ export class State implements IState, Visitable {
   logger: any;
   parallel: boolean = false;
   initial: boolean = false;
+  final: boolean = false;
   isLeafState: boolean;
 
   // Reference for initial substate
@@ -61,6 +63,7 @@ export class State implements IState, Visitable {
   ) {
     this.stateMachine.logger.debug(`Initializing state ${name}`);
     this.initial = !!config.initial;
+    this.final = !!config.final;
     this.createSubstates(config.states);
     this.isLeafState = Object.keys(this.substates).length === 0;
   }
@@ -83,7 +86,7 @@ export class State implements IState, Visitable {
     this.substates = stateKeys.reduce(
       (acc, key) => ({
         ...acc,
-        [key]: new State(this.stateMachine, key, states[key], this),
+        [key]: createState(this.stateMachine, key, states[key], this),
       }),
       {} as Substates
     );
@@ -114,9 +117,6 @@ export class State implements IState, Visitable {
 
   withdrawSubstates(eventName: SMEvent, eventArgs: any) {
     if (this.parallel) {
-      for (const state in this.substates) {
-        this.substates[state].withdraw(eventName, eventArgs);
-      }
     } else {
       this.enabledSubstate?.withdraw(eventName, eventArgs);
       this.setEnabledSubstate(undefined);
@@ -132,6 +132,8 @@ export class State implements IState, Visitable {
     this.performEntryActions(eventName, eventArgs);
 
     this.resumeSubstates(eventName, eventArgs);
+
+    this.checkFinal();
   }
 
   resumeSubstates(eventName: SMEvent, eventArgs: any) {
@@ -140,11 +142,6 @@ export class State implements IState, Visitable {
     // or the last tha has been active,
     // or specified
     // but for now only initial
-
-    if (this.parallel) {
-      this.resumeParallelRegion(eventName, eventArgs);
-      return;
-    }
 
     const resumingSubstate = this.getResumingSubstate();
 
@@ -155,12 +152,6 @@ export class State implements IState, Visitable {
 
   getResumingSubstate() {
     return this.initialSubstate;
-  }
-
-  resumeParallelRegion(eventName: SMEvent, eventArgs: any) {
-    for (const state in this.substates) {
-      this.substates[state].resume(eventName, eventArgs);
-    }
   }
 
   hasEvent(event: SMEvent): boolean {
@@ -227,6 +218,12 @@ export class State implements IState, Visitable {
       } catch (error) {
         this.stateMachine.handleActionError(error, this, eventName, eventArgs);
       }
+    }
+  }
+
+  private checkFinal() {
+    if (this.final) {
+      this.stateMachine.halt(Result.Finished);
     }
   }
 
@@ -365,4 +362,30 @@ export class State implements IState, Visitable {
       return false;
     }
   }
+}
+
+class ParallelState extends State {
+  parallel = true;
+  withdrawSubstates(eventName: SMEvent, eventArgs: any) {
+    for (const state in this.substates) {
+      this.substates[state].withdraw(eventName, eventArgs);
+    }
+  }
+
+  resumeSubstates(eventName: SMEvent, eventArgs: any) {
+    for (const state in this.substates) {
+      this.substates[state].resume(eventName, eventArgs);
+    }
+  }
+}
+
+export function createState(
+  stateMachine: IStateMachine,
+  name: SMStateName,
+  config: StateDescription,
+  parent?: IState
+) {
+  return config.parallel
+    ? new ParallelState(stateMachine, name, config, parent)
+    : new State(stateMachine, name, config, parent);
 }

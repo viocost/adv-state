@@ -16,7 +16,7 @@ import {
 } from "./types";
 
 import { inspect } from "util";
-import { State } from "./State";
+import { createState } from "./State";
 import { LogFilter } from "./LogFilter";
 import { EventMapper } from "./EventMapper";
 import { StateTreeValidator } from "./StateTreeValidator";
@@ -60,7 +60,7 @@ export default class StateMachine implements IStateMachine, Visitable {
   logLevel: LogLevel = LogLevel.WARN;
 
   // State tree root
-  root: State;
+  root: IState;
   //onCrash?: CrashActionDescriptor;
 
   onGuardError: SMErrorAction = SMErrorAction.Notify;
@@ -158,7 +158,7 @@ export default class StateMachine implements IStateMachine, Visitable {
 
   handleActionError(
     error: Error,
-    state: State,
+    state: IState,
     eventName: SMEvent,
     eventArgs: any
   ) {
@@ -178,7 +178,7 @@ export default class StateMachine implements IStateMachine, Visitable {
     }
   }
 
-  handleAmbiguousTransition(state: State, eventName: SMEvent) {
+  handleAmbiguousTransition(state: IState, eventName: SMEvent) {
     if (this.onAmbiguousTransition === SMErrorAction.Ignore) return;
 
     const errMessage = `Ambiguous transition error in state ${
@@ -201,7 +201,7 @@ export default class StateMachine implements IStateMachine, Visitable {
 
   handleGuardError(
     error: Error,
-    state: State,
+    state: IState,
     eventName: SMEvent,
     eventArgs: any
   ) {
@@ -222,7 +222,7 @@ export default class StateMachine implements IStateMachine, Visitable {
     }
   }
 
-  private validateStateTree(root: State) {
+  private validateStateTree(root: IState) {
     const stateTreeValidator = new StateTreeValidator();
     root.accept(stateTreeValidator);
   }
@@ -233,7 +233,7 @@ export default class StateMachine implements IStateMachine, Visitable {
     this.errorneousHaltMessage = error;
   }
 
-  private halt(result: Result) {
+  halt(result: Result) {
     this.halted = true;
     this.result = result;
 
@@ -245,7 +245,7 @@ export default class StateMachine implements IStateMachine, Visitable {
   }
 
   private initStateTree(stateMap: StateMap) {
-    return new State(this, "root", { states: stateMap }, null);
+    return createState(this, "root", { states: stateMap }, null);
   }
 
   private initMessageBus(messageBus: SMMessageBus) {

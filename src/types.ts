@@ -7,6 +7,7 @@ export interface IStateMachine {
   run(): void;
   accept(visitor: SMVisitor): void;
   update(message: SMMessageBusMessage): void;
+  halt(result: Result): void;
 
   dispatchMessage(message: SMMessageName, eventArgs: any): void;
   processEvent(eventName: SMEvent, eventArgs: any): void;
@@ -46,7 +47,7 @@ export interface IState {
   parent?: IState;
   config: StateDescription;
   withdraw(eventName: SMEvent, eventArgs?: any): void;
-  resume(eventName: SMEvent, eventArgs?: any): void;
+  resume(eventName?: SMEvent, eventArgs?: any): void;
   performTransition(
     newStateName: SMStateName,
     eventName: SMEvent,
@@ -95,7 +96,9 @@ export type StateDescription = {
   /**
    * initial flag defines the state the machine will enter during the initialization
    */
-  initial?: true;
+  initial?: boolean;
+
+  final?: boolean;
 
   /**
    * Set of entry actions
@@ -116,6 +119,11 @@ export type StateDescription = {
    * set of substates
    * */
   states?: StateMap;
+
+  /**
+   * If true, then state is parallel region
+   * */
+  parallel?: boolean;
 };
 
 /**

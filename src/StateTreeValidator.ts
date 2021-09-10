@@ -34,7 +34,7 @@ export class StateTreeValidator
   }
 
   validateInitialSubstate(state: IState) {
-    if (state.isLeafState) return;
+    if (state.isLeafState || state.parallel) return;
 
     const initialCount = Array.from(Object.values(state.substates)).reduce(
       (acc, substate) => (substate.initial ? acc + 1 : acc),
@@ -53,7 +53,6 @@ export class StateTreeValidator
     description: EventDescription | Array<EventDescription>
   ) {
     asArray(description).forEach((description) => {
-      console.dir(description);
       this.validateStateTransition(state, description.toState);
       this.validateActions(description.actions);
       this.validateActions(description.guards);

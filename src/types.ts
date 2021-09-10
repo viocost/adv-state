@@ -1,9 +1,13 @@
 export interface IStateMachine {
+  enterStateMessagePrefix?: string;
+  exitStateMessagePrefix?: string;
+  actionMessagePrefix?: string;
   name?: string;
   logger: LogProcessor;
   run(): void;
   accept(visitor: SMVisitor): void;
   update(message: SMMessageBusMessage): void;
+  halt(result: Result): void;
 
   dispatchMessage(message: SMMessageName, eventArgs: any): void;
   processEvent(eventName: SMEvent, eventArgs: any): void;
@@ -26,6 +30,7 @@ export interface IStateMachine {
 export interface IState {
   enabled: boolean;
   enabledSubstate?: IState;
+  hasEvent(event: SMEvent): boolean;
 
   substates: Substates;
   logger: any;
@@ -42,7 +47,7 @@ export interface IState {
   parent?: IState;
   config: StateDescription;
   withdraw(eventName: SMEvent, eventArgs?: any): void;
-  resume(eventName: SMEvent, eventArgs?: any): void;
+  resume(eventName?: SMEvent, eventArgs?: any): void;
   performTransition(
     newStateName: SMStateName,
     eventName: SMEvent,
@@ -91,7 +96,9 @@ export type StateDescription = {
   /**
    * initial flag defines the state the machine will enter during the initialization
    */
-  initial?: true;
+  initial?: boolean;
+
+  final?: boolean;
 
   /**
    * Set of entry actions
@@ -99,19 +106,9 @@ export type StateDescription = {
   entry?: SMAction | Array<SMAction>;
 
   /**
-   * A message to push over message bus when entering the state
-   * */
-  entryMessage?: SMMessageName;
-
-  /**
    * Set of exit actions
    */
   exit?: SMAction | Array<SMAction>;
-
-  /**
-   * A message to push over message bus when exiting the state
-   * */
-  exitMessage?: SMMessageName;
 
   /**
    * Set of transitions: see SMEvents
@@ -122,6 +119,11 @@ export type StateDescription = {
    * set of substates
    * */
   states?: StateMap;
+
+  /**
+   * If true, then state is parallel region
+   * */
+  parallel?: boolean;
 };
 
 /**
@@ -129,10 +131,6 @@ export type StateDescription = {
  */
 export type StateMap = {
   [key: SMStateName]: StateDescription;
-};
-
-export type EventMap = {
-  [key: SMEvent]: IState;
 };
 
 export type Substates = {
@@ -178,6 +176,10 @@ export type StateMachineConfig = {
   logLevel?: LogLevel;
 
   mBusErrorMessage?: string;
+
+  enterStateMessagePrefix?: string;
+  exitStateMessagePrefix?: string;
+  actionMessagePrefix?: string;
 
   contextObject?: Object | null;
 };

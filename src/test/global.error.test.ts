@@ -65,7 +65,7 @@ describe("When notify action specified on action exception", () => {
   });
 
   it("It should finish the transition and send error message over message bus", () => {
-    expect(bus.receivedMessages[0]).toBe(errorMessage);
+    expect(bus.receivedMessages[3]).toBe(errorMessage);
     expect(sm.state).toBe("root.2");
     expect(actions[1]).toHaveBeenCalledTimes(1);
     expect(actions[0]).toHaveBeenCalledTimes(1);
@@ -93,7 +93,7 @@ describe("When shutdown action specified on action exception", () => {
   });
 
   it("Should halt state machine with error and throw the exception without calling next handler", () => {
-    expect(bus.receivedMessages[0]).toBe(errorMessage);
+    expect(bus.receivedMessages[3]).toBe(errorMessage);
     expect(sm.state).toBe("root");
     expect(actions[0]).toHaveBeenCalledTimes(1);
     expect(actions[1]).toHaveBeenCalledTimes(0);
@@ -113,7 +113,7 @@ describe("When ignore action specified on entry action exception", () => {
   const sm = prepareTestSMEntryError(bus, SMErrorAction.Ignore, actions, []);
 
   beforeAll(() => {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       sm.run();
       sm.handle.doneZero({ foo: "bar" });
       setTimeout(resolve, 100);
@@ -121,7 +121,8 @@ describe("When ignore action specified on entry action exception", () => {
   });
 
   it("It should ignore error and finish the transition without notifying error", () => {
-    expect(bus.receivedMessages[0]).toBeUndefined();
+    console.dir(bus.receivedMessages);
+    expect(bus.receivedMessages[4]).toBeUndefined();
     expect(sm.state).toBe("root.2");
     expect(actions[1]).toHaveBeenCalledTimes(1);
     expect(actions[1]).toHaveBeenCalledTimes(1);
@@ -149,7 +150,7 @@ describe("When notify action specified on entry action exception", () => {
   });
 
   it("It should send error messge over message bus and finish the transition", () => {
-    expect(bus.receivedMessages[0]).toBe(errorMessage);
+    expect(bus.receivedMessages[4]).toBe(errorMessage);
     expect(sm.state).toBe("root.2");
     expect(actions[1]).toHaveBeenCalledTimes(1);
     expect(actions[1]).toHaveBeenCalledTimes(1);
@@ -177,7 +178,8 @@ describe("When shutdown action specified on entry action exception", () => {
   });
 
   it("Should halt state machine and throw error without calling next action. Error note should be sent", () => {
-    expect(bus.receivedMessages[0]).toBe(errorMessage);
+    console.dir(bus.receivedMessages);
+    expect(bus.receivedMessages[4]).toBe(errorMessage);
     expect(sm.state).toBe("root.2");
     expect(actions[0]).toHaveBeenCalledTimes(1);
     expect(actions[1]).toHaveBeenCalledTimes(0);
@@ -205,7 +207,8 @@ describe("When ignore action specified on exit action exception", () => {
   });
 
   it("It should ignore error and finish the transition without sending error", () => {
-    expect(bus.receivedMessages[0]).toBeUndefined();
+    console.dir(bus.receivedMessages);
+    expect(bus.receivedMessages[4]).toBeUndefined();
     expect(sm.state).toBe("root.2");
     expect(actions[1]).toHaveBeenCalledTimes(1);
     expect(actions[1]).toHaveBeenCalledTimes(1);
@@ -233,7 +236,7 @@ describe("When notify action specified on entry action exception", () => {
   });
 
   it("It should send error over messge bus and finish the transition", () => {
-    expect(bus.receivedMessages[0]).toBe(errorMessage);
+    expect(bus.receivedMessages[2]).toBe(errorMessage);
     expect(sm.state).toBe("root.2");
     expect(actions[1]).toHaveBeenCalledTimes(1);
     expect(actions[1]).toHaveBeenCalledTimes(1);
@@ -261,7 +264,7 @@ describe("When shutdown action specified on action exception", () => {
   });
 
   it("It should perform emergency shutdown and throw an error without leaving the state", () => {
-    expect(bus.receivedMessages[0]).toBe(errorMessage);
+    expect(bus.receivedMessages[2]).toBe(errorMessage);
     expect(sm.state).toBe("root.0");
     expect(actions[0]).toHaveBeenCalledTimes(1);
     expect(actions[1]).toHaveBeenCalledTimes(0);

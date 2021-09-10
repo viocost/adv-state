@@ -9,7 +9,7 @@ describe("Advanced test with guard conditions", () => {
     return new Promise((resolve, reject) => {
       bus.on("to-state-2", () => sm.handle.doneTwo({ bar: "bazz" }));
 
-      bus.on("at-finish", resolve);
+      bus.on("ENTER_finish", resolve);
       sm.run();
       sm.handle.doneZero({ foo: "bar" });
     });
@@ -58,7 +58,6 @@ function prepareTestSM(mBus) {
       },
 
       2: {
-        entryMessage: "at-state-2",
         events: {
           doneTwo: [
             {
@@ -67,14 +66,11 @@ function prepareTestSM(mBus) {
             },
           ],
         },
-
-        exitMessage: "leaving-state-2",
       },
 
       3: {},
       finish: {
         entry: () => console.log("Done"),
-        entryMessage: "at-finish",
       },
     },
   });

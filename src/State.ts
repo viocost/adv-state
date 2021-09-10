@@ -10,6 +10,7 @@ import {
   Visitable,
   SMVisitor,
   Substates,
+  Result,
 } from "./types";
 import { actionsAsArray, asArray } from "./util";
 
@@ -24,7 +25,7 @@ import { actionsAsArray, asArray } from "./util";
  *
  * Event processing:
  * First we find the right event descriptor by evaluating guards
- *
+ *k
  * With descriptor:
  * If there are just actions - then they are executed.
  *
@@ -45,6 +46,7 @@ export class State implements IState, Visitable {
   logger: any;
   parallel: boolean = false;
   initial: boolean = false;
+  final: boolean = false;
   isLeafState: boolean;
 
   // Reference for initial substate
@@ -61,6 +63,7 @@ export class State implements IState, Visitable {
   ) {
     this.stateMachine.logger.debug(`Initializing state ${name}`);
     this.initial = !!config.initial;
+    this.final = !!config.final;
     this.createSubstates(config.states);
     this.isLeafState = Object.keys(this.substates).length === 0;
   }
@@ -83,7 +86,7 @@ export class State implements IState, Visitable {
     this.substates = stateKeys.reduce(
       (acc, key) => ({
         ...acc,
-        [key]: new State(this.stateMachine, key, states[key], this),
+        [key]: createState(this.stateMachine, key, states[key], this),
       }),
       {} as Substates
     );
@@ -100,11 +103,9 @@ export class State implements IState, Visitable {
   }
 
   withdraw(eventName: SMEvent, eventArgs: any) {
+    this.stateMachine.logger.debug(`Withdrawing from state ${this.name}`);
     // Call substates to withdraw
-    if (this.enabledSubstate) {
-      this.enabledSubstate.withdraw(eventName, eventArgs);
-      this.setEnabledSubstate(undefined);
-    }
+    this.withdrawSubstates(eventName, eventArgs);
 
     // Perform exit actions
     this.performExitActions(eventName, eventArgs);
@@ -112,6 +113,14 @@ export class State implements IState, Visitable {
 
     // Set itself off
     this.setEnabled(false);
+  }
+
+  withdrawSubstates(eventName: SMEvent, eventArgs: any) {
+    if (this.parallel) {
+    } else {
+      this.enabledSubstate?.withdraw(eventName, eventArgs);
+      this.setEnabledSubstate(undefined);
+    }
   }
 
   resume(eventName?: SMEvent, eventArgs?: any) {
@@ -122,15 +131,31 @@ export class State implements IState, Visitable {
     this.sendEntryMessage(eventArgs);
     this.performEntryActions(eventName, eventArgs);
 
+    this.resumeSubstates(eventName, eventArgs);
+
+    this.checkFinal();
+  }
+
+  resumeSubstates(eventName: SMEvent, eventArgs: any) {
     // call resume on child state that must be activated
     // We should either resume initial child,
     // or the last tha has been active,
     // or specified
     // but for now only initial
-    this.initialSubstate?.resume(eventName, eventArgs);
 
-    this.setEnabledSubstate(this.initialSubstate);
-    this.setHistorySubstate(this.initialSubstate);
+    const resumingSubstate = this.getResumingSubstate();
+
+    resumingSubstate?.resume(eventName, eventArgs);
+    this.setEnabledSubstate(resumingSubstate);
+    this.setHistorySubstate(this.historySubstate || resumingSubstate);
+  }
+
+  getResumingSubstate() {
+    return this.initialSubstate;
+  }
+
+  hasEvent(event: SMEvent): boolean {
+    return this.config.events && event in this.config.events;
   }
 
   setEnabledSubstate(state?: IState) {
@@ -164,12 +189,19 @@ export class State implements IState, Visitable {
   }
 
   private performExitActions(eventName: SMEvent, eventArgs?: any) {
+    this.stateMachine.logger.debug(
+      `Performing exit actions in state ${this.name}`
+    );
     const exitActions = actionsAsArray(this.config.exit);
 
     this.performActions(exitActions, eventName, eventArgs);
   }
 
   private performEntryActions(eventName: SMEvent, eventArgs?: any) {
+    this.stateMachine.logger.debug(
+      `Performing entry actions in state ${this.name}`
+    );
+
     const entryActions = actionsAsArray(this.config.entry);
 
     this.performActions(entryActions, eventName, eventArgs);
@@ -186,6 +218,12 @@ export class State implements IState, Visitable {
       } catch (error) {
         this.stateMachine.handleActionError(error, this, eventName, eventArgs);
       }
+    }
+  }
+
+  private checkFinal() {
+    if (this.final) {
+      this.stateMachine.halt(Result.Finished);
     }
   }
 
@@ -251,15 +289,23 @@ export class State implements IState, Visitable {
   }
 
   sendEntryMessage(eventArgs?: any) {
-    this.stateMachine.dispatchMessage(this.config.entryMessage, eventArgs);
+    this.stateMachine.dispatchMessage(this.entryMessage(), eventArgs);
   }
 
   sendExitMessage(eventArgs?: any) {
-    this.stateMachine.dispatchMessage(this.config.exitMessage, eventArgs);
+    this.stateMachine.dispatchMessage(this.exitMessage(), eventArgs);
   }
 
   sendTransitionMessage(event: EventDescription, eventArgs?: any) {
     this.stateMachine.dispatchMessage(event.message, eventArgs);
+  }
+
+  private exitMessage(): string {
+    return `${this.stateMachine.exitStateMessagePrefix}${this.name}`;
+  }
+
+  private entryMessage(): string {
+    return `${this.stateMachine.enterStateMessagePrefix}${this.name}`;
   }
 
   private performOnTransitionActions(
@@ -316,4 +362,30 @@ export class State implements IState, Visitable {
       return false;
     }
   }
+}
+
+class ParallelState extends State {
+  parallel = true;
+  withdrawSubstates(eventName: SMEvent, eventArgs: any) {
+    for (const state in this.substates) {
+      this.substates[state].withdraw(eventName, eventArgs);
+    }
+  }
+
+  resumeSubstates(eventName: SMEvent, eventArgs: any) {
+    for (const state in this.substates) {
+      this.substates[state].resume(eventName, eventArgs);
+    }
+  }
+}
+
+export function createState(
+  stateMachine: IStateMachine,
+  name: SMStateName,
+  config: StateDescription,
+  parent?: IState
+) {
+  return config.parallel
+    ? new ParallelState(stateMachine, name, config, parent)
+    : new State(stateMachine, name, config, parent);
 }

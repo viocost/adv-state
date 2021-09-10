@@ -53,6 +53,7 @@ export class StateTreeValidator
     description: EventDescription | Array<EventDescription>
   ) {
     asArray(description).forEach((description) => {
+      console.dir(description);
       this.validateStateTransition(state, description.toState);
       this.validateActions(description.actions);
       this.validateActions(description.guards);
@@ -60,7 +61,7 @@ export class StateTreeValidator
   }
 
   validateStateTransition(state: IState, toState: SMStateName) {
-    if (!state.parent.substates[toState]) {
+    if (toState && !state.parent.substates[toState]) {
       throw new InvalidTransition(
         `Transition ${state.name} -> ${toState}: ${state.parent.name} doesn't have substate ${toState}`
       );

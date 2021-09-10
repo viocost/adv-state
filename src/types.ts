@@ -1,4 +1,7 @@
 export interface IStateMachine {
+  enterStateMessagePrefix?: string;
+  exitStateMessagePrefix?: string;
+  actionMessagePrefix?: string;
   name?: string;
   logger: LogProcessor;
   run(): void;
@@ -100,19 +103,9 @@ export type StateDescription = {
   entry?: SMAction | Array<SMAction>;
 
   /**
-   * A message to push over message bus when entering the state
-   * */
-  entryMessage?: SMMessageName;
-
-  /**
    * Set of exit actions
    */
   exit?: SMAction | Array<SMAction>;
-
-  /**
-   * A message to push over message bus when exiting the state
-   * */
-  exitMessage?: SMMessageName;
 
   /**
    * Set of transitions: see SMEvents
@@ -130,10 +123,6 @@ export type StateDescription = {
  */
 export type StateMap = {
   [key: SMStateName]: StateDescription;
-};
-
-export type EventMap = {
-  [key: SMEvent]: IState;
 };
 
 export type Substates = {
@@ -179,6 +168,10 @@ export type StateMachineConfig = {
   logLevel?: LogLevel;
 
   mBusErrorMessage?: string;
+
+  enterStateMessagePrefix?: string;
+  exitStateMessagePrefix?: string;
+  actionMessagePrefix?: string;
 
   contextObject?: Object | null;
 };

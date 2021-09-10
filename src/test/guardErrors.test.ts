@@ -16,7 +16,7 @@ describe("When Ignore strategy is choosen for guard errors", () => {
 
   it("Should end up in initial state and not throw error", () => {
     expect(sm.state).toBe("root.initial");
-    expect(mBus.receivedMessages.length).toBe(0);
+    expect(mBus.receivedMessages.length).toBe(2);
     expect(sm.halted).toBeFalsy();
   });
 });
@@ -35,8 +35,9 @@ describe("When notify strategy is choosen for guard errors", () => {
   it("Should end up in initial state, not throw error, and deliver message over MBus", () => {
     expect(sm.state).toBe("root.initial");
 
-    expect(mBus.receivedMessages[0]).toBe("ERROR");
-    expect(mBus.receivedPayloads[0]).toBeDefined();
+    console.dir(mBus.receivedMessages);
+    expect(mBus.receivedMessages[2]).toBe("ERROR");
+    expect(mBus.receivedPayloads[2]).toBeDefined();
     expect(sm.halted).toBeFalsy();
   });
 });
@@ -54,8 +55,8 @@ describe("When shutdown strategy is choosen for guard errors", () => {
   });
   it("Should be in initial state. Machine should be halted with result Error. Error message should be defined", () => {
     expect(sm.state).toBe("root.initial");
-    expect(mBus.receivedMessages[0]).toBe("ERROR");
-    expect(mBus.receivedPayloads[0]).toBeDefined();
+    expect(mBus.receivedMessages[2]).toBe("ERROR");
+    expect(mBus.receivedPayloads[2]).toBeDefined();
     expect(sm.halted).toBeTruthy();
     expect(sm.errorneousHaltMessage).toBeDefined();
     expect(sm.result).toBe(Result.Error);

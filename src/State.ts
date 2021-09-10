@@ -135,7 +135,7 @@ export class State implements IState, Visitable {
   }
 
   hasEvent(event: SMEvent): boolean {
-    return event in this.config.events;
+    return this.config.events && event in this.config.events;
   }
 
   setEnabledSubstate(state?: IState) {
@@ -263,15 +263,23 @@ export class State implements IState, Visitable {
   }
 
   sendEntryMessage(eventArgs?: any) {
-    this.stateMachine.dispatchMessage(this.config.entryMessage, eventArgs);
+    this.stateMachine.dispatchMessage(this.entryMessage(), eventArgs);
   }
 
   sendExitMessage(eventArgs?: any) {
-    this.stateMachine.dispatchMessage(this.config.exitMessage, eventArgs);
+    this.stateMachine.dispatchMessage(this.exitMessage(), eventArgs);
   }
 
   sendTransitionMessage(event: EventDescription, eventArgs?: any) {
     this.stateMachine.dispatchMessage(event.message, eventArgs);
+  }
+
+  private exitMessage(): string {
+    return `${this.stateMachine.exitStateMessagePrefix}${this.name}`;
+  }
+
+  private entryMessage(): string {
+    return `${this.stateMachine.enterStateMessagePrefix}${this.name}`;
   }
 
   private performOnTransitionActions(

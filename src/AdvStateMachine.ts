@@ -11,7 +11,6 @@ import {
   Visitable,
   SMVisitor,
   SMErrorAction,
-  EventMap,
   Result,
   IState,
 } from "./types";
@@ -52,7 +51,7 @@ export default class StateMachine implements IStateMachine, Visitable {
   handle: any = createHandler(this);
 
   // Maps events to states
-  eventMap: EventMap;
+  eventSet: Set<SMEvent>;
 
   // Message bus
   messageBus: SMMessageBus = new FakeBus();
@@ -72,6 +71,10 @@ export default class StateMachine implements IStateMachine, Visitable {
   onDisabledStateEvent: SMErrorAction = SMErrorAction.Ignore;
   onMBusError: SMErrorAction = SMErrorAction.Shutdown;
   onLoggerError: SMErrorAction = SMErrorAction.Shutdown;
+
+  enterStateMessagePrefix: string = "ENTER_";
+  exitStateMessagePrefix: string = "EXIT_";
+
   private eventStateMatcher: EventStateMatcher;
 
   constructor({
@@ -79,6 +82,8 @@ export default class StateMachine implements IStateMachine, Visitable {
     stateMap,
     onGuardError,
     messageBus,
+    enterStateMessagePrefix,
+    exitStateMessagePrefix,
     onActionError,
     contextObject,
     onAmbiguousTransition,
@@ -96,6 +101,10 @@ export default class StateMachine implements IStateMachine, Visitable {
     this.onAmbiguousTransition =
       onAmbiguousTransition || this.onAmbiguousTransition;
     this.onIllegalEvent = onIllegalEvent || this.onIllegalEvent;
+    this.enterStateMessagePrefix =
+      enterStateMessagePrefix || this.enterStateMessagePrefix;
+    this.exitStateMessagePrefix =
+      exitStateMessagePrefix || this.exitStateMessagePrefix;
 
     this.initLogger(this.logLevel);
     this.logger.debug(`Initialized logger`);
@@ -103,7 +112,7 @@ export default class StateMachine implements IStateMachine, Visitable {
     this.initStateTree(stateMap);
     this.root = this.initStateTree(stateMap);
     this.validateStateTree(this.root);
-    this.eventMap = this.mapEvents();
+    this.eventSet = this.mapEvents();
     this.eventStateMatcher = new EventStateMatcher(this.root);
   }
 
@@ -253,9 +262,9 @@ export default class StateMachine implements IStateMachine, Visitable {
 
     this.logger.debug(
       `${this.name} recognizes events ${inspect(
-        Array.from(Object.keys(eventMapper.getMap()))
+        Array.from(Object.keys(eventMapper.getSet()))
       )}`
     );
-    return eventMapper.getMap();
+    return eventMapper.getSet();
   }
 }

@@ -70,9 +70,24 @@ export class State implements IState, Visitable {
 
   accept(visitor: SMVisitor) {
     visitor.enterState(this);
-    for (let substate of Object.values(this.substates)) {
-      substate.accept(visitor);
+    if (Object.keys(this.config.events).length > 0) {
+      visitor.enterEvents(this);
+      for (let eventName in this.config.events) {
+        visitor.enterEventDescription(eventName, this.config.events[eventName]);
+        visitor.exitEventDescription(eventName, this.config.events[eventName]);
+      }
+      visitor.exitEvents(this);
     }
+    if (Object.keys(this.substates).length > 0) {
+      visitor.enterSubstates(this);
+
+      for (let substate of Object.values(this.substates)) {
+        substate.accept(visitor);
+      }
+
+      visitor.exitSubstates(this);
+    }
+
     visitor.exitState(this);
   }
 

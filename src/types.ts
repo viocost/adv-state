@@ -246,8 +246,18 @@ export interface SMVisitor {
   exitStateMachine: (stateMachine: IStateMachine) => void;
   enterState: (state: IState) => void;
   exitState: (state: IState) => void;
-  enterEventDescription: (eventDescription: EventDescription) => void;
-  exitEventDescription: (eventDescription: EventDescription) => void;
+  enterSubstates: (state: IState) => void;
+  exitSubstates: (state: IState) => void;
+  enterEvents: (state: IState) => void;
+  exitEvents: (state: IState) => void;
+  enterEventDescription: (
+    eventName: SMEvent,
+    eventDescription: EventDescription | Array<EventDescription>
+  ) => void;
+  exitEventDescription: (
+    eventName: SMEvent,
+    eventDescription: EventDescription | Array<EventDescription>
+  ) => void;
 }
 
 export interface Visitable {

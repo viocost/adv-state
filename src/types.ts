@@ -3,6 +3,7 @@ export interface IStateMachine {
   exitStateMessagePrefix?: string;
   actionMessagePrefix?: string;
   name?: string;
+  root: IState;
   logger: LogProcessor;
   run(): void;
   accept(visitor: SMVisitor): void;
@@ -36,6 +37,7 @@ export interface IState {
   logger: any;
   parallel: boolean;
   initial: boolean;
+  final: boolean;
   isLeafState: boolean;
 
   // Reference for initial substate

@@ -16,6 +16,7 @@ export class XStateVizTranslator extends StateMachineVisitor {
     this.write(`id: '${stateMachine.name}'`);
     this.write(`initial: '${stateMachine.root.initialSubstate.name}'`);
     this.write(`states: {`);
+    this.indent();
   }
   exitStateMachine(stateMachine: IStateMachine) {
     this.dedent();
@@ -39,7 +40,10 @@ export class XStateVizTranslator extends StateMachineVisitor {
     this.writeActions("entry", state.config.entry);
     this.writeActions("exit", state.config.exit);
   }
-  exitState(state: IState) {}
+  exitState(state: IState) {
+    this.dedent();
+    this.write("}");
+  }
   enterEventDescription(eventName, eventDescription: EventDescription) {}
   exitEventDescription(eventName, eventDescription: EventDescription) {}
 

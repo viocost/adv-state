@@ -40,8 +40,8 @@ export class XStateVizTranslator extends StateMachineVisitor {
     this.writeActions("exit", state.config.exit);
   }
   exitState(state: IState) {}
-  enterEventDescription(eventDescription: EventDescription) {}
-  exitEventDescription(eventDescription: EventDescription) {}
+  enterEventDescription(eventName, eventDescription: EventDescription) {}
+  exitEventDescription(eventName, eventDescription: EventDescription) {}
 
   indent() {
     this.indentation += this.indentStep;

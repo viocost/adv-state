@@ -17,9 +17,9 @@ export class EventStateMatcher {
   constructor(private root: IState) {}
 
   getActiveStateStackForEvent(event: SMEvent) {
-    const stack = [];
-    const visited = new Set();
-    let queue = [this.root] as Array<IState>;
+    const stack: IState[] = [];
+    const visited = new Set<IState>();
+    let queue: IState[] = [this.root];
     visited.add(this.root);
 
     while (queue.length > 0) {
@@ -45,4 +45,6 @@ export class EventStateMatcher {
 
     return stack;
   }
+
+  helper(state: IState, stack: []) {}
 }

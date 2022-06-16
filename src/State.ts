@@ -70,7 +70,8 @@ export class State implements IState, Visitable {
 
   accept(visitor: SMVisitor) {
     visitor.enterState(this);
-    if (Object.keys(this.config.events).length > 0) {
+
+    if (this.config.events && Object.keys(this.config.events).length > 0) {
       visitor.enterEvents(this);
       for (let eventName in this.config.events) {
         visitor.enterEventDescription(eventName, this.config.events[eventName]);
@@ -131,11 +132,8 @@ export class State implements IState, Visitable {
   }
 
   withdrawSubstates(eventName: SMEvent, eventArgs: any) {
-    if (this.parallel) {
-    } else {
-      this.enabledSubstate?.withdraw(eventName, eventArgs);
-      this.setEnabledSubstate(undefined);
-    }
+    this.enabledSubstate?.withdraw(eventName, eventArgs);
+    this.setEnabledSubstate(undefined);
   }
 
   resume(eventName?: SMEvent, eventArgs?: any) {
